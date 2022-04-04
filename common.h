@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "mem.h"
+#include "plox_value.h"
 
 
 

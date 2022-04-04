@@ -4,7 +4,7 @@
 #define DEFAULT_SIZE 4;
 
 #define GROW_ARRAY_SIZE(capacity) \
-        ((capacity) < DEFAULT_SIZE ? DEFAULT_SIZE : (capacity) * 2
+        (capacity) < DEFAULT_SIZE ? DEFAULT_SIZE : (capacity) * 2
 
 #define GROW_ARRAY(type, ptr, old_count, new_count)\
                    (type*)reallocate(ptr, sizeof(type) * (old_count), sizeof(type) * (new_count) )
