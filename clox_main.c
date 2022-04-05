@@ -5,7 +5,7 @@ int main(int argc, const char* argv[])
 {
     CHUNK chunk;
     init_chunk(&chunk);
-    write_chunk(&chunk, OP_RETURN);
+    write_chunk(&chunk, OP_RETURN, 100);
     free_chunk(&chunk);
 
    return 0;

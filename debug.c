@@ -33,7 +33,7 @@ int simple_instruction(const char* op_name, int offset)
 
 void print_constant(const char* name, const CHUNK* chunk, int constant_index)
 {
-    Value constant = chunk->constants[constant_index];
+    Value constant = chunk->constants.values[constant_index];
     printf("%-16s %4d '", name, constant_index);
     printf("%g\n", constant);
 }

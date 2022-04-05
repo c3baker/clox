@@ -11,11 +11,14 @@
 #include "common.h"
 #include "clox_debug.h"
 
+#define MAX_STACK_SIZE 512
+
 typedef struct
 {
    CHUNK* chunk;
    uint8_t* ip;
-
+   Value value_stack[MAX_STACK_SIZE];
+   Value* stack_top;
 }VM;
 
 typedef enum
@@ -28,7 +31,8 @@ typedef enum
 void init_VM(VM* vm);
 void free_VM(VM* vm);
 INTERPRET_RESULT interpret(VM* vm, CHUNK* chunk);
-
+Value pop(VM* vm);
+void push(VM* vm, Value v);
 
 
 

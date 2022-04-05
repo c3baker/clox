@@ -11,12 +11,34 @@ static INTERPRET_RESULT run(VM* vm);
 
 void init_VM(VM* vm)
 {
-
+    vm->stack_top = vm->value_stack;
 }
 
 void free_VM(VM* vm)
 {
 
+}
+
+Value pop(VM* vm)
+{
+    if(vm->stack_top == vm->value_stack)
+    {
+        printf("FATAL ERROR: STACK UNDERFLOW!\n");
+        exit(1);
+    }
+    vm->stack_top--;
+    return *vm->stack_top;
+}
+
+void push(VM* vm, Value v)
+{
+    if((vm->stack_top - vm->value_stack) == MAX_STACK_SIZE)
+    {
+        printf("FATAL ERROR: STACK OVERFLOW!\n");
+        exit(1);
+    }
+    *vm->stack_top = v;
+    vm->stack_top++;
 }
 
 INTERPRET_RESULT interpret(VM* vm, CHUNK* chunk)
@@ -30,7 +52,15 @@ INTERPRET_RESULT interpret(VM* vm, CHUNK* chunk)
 static INTERPRET_RESULT run(VM* vm)
 {
 #define READ_BYTE() (*vm->ip++)
-#define READ_CONSTANT(index) (vm->chunk->constants.values[(index)])
+#define READ_CONSTANT() (vm->chunk->constants.values[READ_BYTE()])
+#define READ_LONG_CONSTANT() (vm->chunk->constants.values[(READ_BYTE() | READ_BYTE()<<8 | READ_BYTE()<<16)])
+#define BINARY_OP(op) \
+        (do{ \
+           Value b = pop(vm); \
+           Value a = pop(vm); \
+           push(vm, a (op) b); \
+          }while(0))
+
 
     while(1)
     {
@@ -43,15 +73,11 @@ static INTERPRET_RESULT run(VM* vm)
             case OP_RETURN:
                 return INTERPRET_OK;
             case OP_CONSTANT:
-                Value constant = READ_CONSTANT(READ_BYTE());
+                Value constant = READ_CONSTANT();
 
                 return INTERPRET_OK;
             case OP_CONSTANT_LONG:
-                uint32_t indx = READ_BYTE();
-                Value constant = 0;
-                indx |= READ_BYTE()<<8;
-                indx |= READ_BYTE()<<16;
-                constant = READ_CONSTANT(indx);
+                Value constant = READ_LONG_CONSTANT();                
 
                 return INTERPRET_OK;
 
@@ -60,6 +86,8 @@ static INTERPRET_RESULT run(VM* vm)
         }
     }
 
+#undef BINARY_OP
+#undef READ_LONG_CONSTANT
 #undef READ_CONSTANT
 #undef READ_BYTE
 }
