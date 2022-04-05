@@ -5,10 +5,12 @@
 #include "clox_value.h"
 
 #define LINE_INIT -1
+#define MAX_SHORT_CONST_INDEX 255
 
 typedef enum{
     OP_RETURN,
-    OP_CONSTANT
+    OP_CONSTANT,
+    OP_CONSTANT_LONG
 }OP_CODE;
 
 typedef struct{

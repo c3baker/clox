@@ -31,13 +31,25 @@ int simple_instruction(const char* op_name, int offset)
     return offset + 1;
 }
 
-int constant_instruction(const char* name, const CHUNK* chunk, int offset )
+void print_constant(const char* name, const CHUNK* chunk, int constant_index)
 {
-    uint8_t constant_index = chunk->code[offset + 1];
     Value constant = chunk->constants[constant_index];
     printf("%-16s %4d '", name, constant_index);
     printf("%g\n", constant);
+}
+
+int constant_instruction(const char* name, const CHUNK* chunk, int offset )
+{
+    uint8_t constant_index = chunk->code[offset + 1];
+    print_constant(name, chunk, constant_index);
     return offset + 2;
+}
+
+int constant_long_instruction(const char* name, const CHUNK* chunk, int offset)
+{
+    uint32_t constant_index = (chunk->code[offset + 1]) | (chunk->code[offset + 2]<<8) | (chunk->code[offset + 3]<<16) ;
+    print_constant(name, chunk, constant_index);
+    return offset + 4;
 }
 
 void disassemble_chunk(const CHUNK* chunk, const char* name)
@@ -65,6 +77,9 @@ int disassemble_instruction(const CHUNK* chunk, int offset)
             break;
         case OP_CONSTANT:
             return constant_instruction("OP_CONSTANT", chunk, offset);
+            break;
+        case OP_CONSTANT_LONG:
+            return constant_long_instruction("OP_CONSTANT_LONG", chunk, offset);
             break;
         default:
         printf("Unknown opcode %d\n", instruction);

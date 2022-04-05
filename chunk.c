@@ -83,3 +83,23 @@ int add_constant(CHUNK* chunk, Value value)
     write_value(&chunk->constants, value);
     return chunk->count - 1;
 }
+
+void write_constant(CHUNK* chunk, Value value, int line)
+{
+    int index = write_value(&chunk->constants);
+
+    if(index > MAX_SHORT_CONST_INDEX)
+    {
+        // Little Endian byte storage
+        write_chunk(chunk, OP_CONSTANT_LONG, line);
+        write_chunk(chunk, (uint8_t)(index & MAX_SHORT_CONST_INDEX), line);
+        write_chunk(chunk, (uint8_t)((index >> 8) & MAX_SHORT_CONST_INDEX), line);
+        write_chunk(chunk, (uint8_t)((index >> 16) & MAX_SHORT_CONST_INDEX), line);
+    }
+    else
+    {
+        write_chunk(chunk, OP_CONSTANT, line);
+        write_chunk(chunk, (uint8_t)index, line);
+    }
+
+}
