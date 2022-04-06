@@ -1,4 +1,6 @@
-#include "clox_chunk.h"
+#include "common.h"
+
+static int add_constant(CHUNK* chunk, Value value);
 
 void init_chunk_lines(LINE* lines)
 {
@@ -78,7 +80,7 @@ void write_chunk(CHUNK* chunk, uint8_t byte, int line)
 }
 
 
-int add_constant(CHUNK* chunk, Value value)
+static int add_constant(CHUNK* chunk, Value value)
 {
     write_value(&chunk->constants, value);
     return chunk->count - 1;
@@ -86,7 +88,7 @@ int add_constant(CHUNK* chunk, Value value)
 
 void write_constant(CHUNK* chunk, Value value, int line)
 {
-    int index = write_value(&chunk->constants);
+    int index = add_constant(&chunk->constants, value);
 
     if(index > MAX_SHORT_CONST_INDEX)
     {
