@@ -30,10 +30,9 @@ typedef enum
 
 VM* init_VM(void);
 void free_VM(VM** vm);
-INTERPRET_RESULT interpret(VM* vm, CHUNK* chunk);
+INTERPRET_RESULT interpret(VM* vm, const char* source);
 Value pop(VM* vm);
 void push(VM* vm, Value v);
-
 
 
 #endif /* CLOX_VM_H_ */

@@ -9,6 +9,6 @@
 #include "clox_chunk.h"
 #include "clox_value.h"
 
-
-
+#define ERROR_EXIT_SOURCE_FILE_ERROR 74
+#define ERROR_EXIT_CLOX_USAGE 64
 #endif

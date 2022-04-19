@@ -51,12 +51,9 @@ void push(VM* vm, Value v)
     vm->stack_top++;
 }
 
-INTERPRET_RESULT interpret(VM* vm, CHUNK* chunk)
+INTERPRET_RESULT interpret(VM* vm, const char* source)
 {
-    vm->chunk = chunk;
-    vm->ip = vm->chunk->code;
-
-    return run(vm);
+    compile(source);
 }
 
 static INTERPRET_RESULT run(VM* vm)
