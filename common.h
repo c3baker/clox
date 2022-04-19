@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "mem.h"
 #include "clox_chunk.h"
 #include "clox_value.h"

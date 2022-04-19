@@ -9,14 +9,24 @@
 
 static INTERPRET_RESULT run(VM* vm);
 
-void init_VM(VM* vm)
+VM* init_VM(void)
 {
+    VM* vm = malloc(sizeof(VM));
+    if(vm == NULL)
+    {
+        return NULL;
+    }
+
     vm->stack_top = vm->value_stack;
+    vm->ip = NULL;
+    
+    return vm;
 }
 
-void free_VM(VM* vm)
+void free_VM(VM** vm)
 {
-
+   free(*vm);
+   vm = NULL;
 }
 
 Value pop(VM* vm)

@@ -28,8 +28,8 @@ typedef enum
     INTERPRET_RUNTIME_ERROR
 }INTERPRET_RESULT;
 
-void init_VM(VM* vm);
-void free_VM(VM* vm);
+VM* init_VM(void);
+void free_VM(VM** vm);
 INTERPRET_RESULT interpret(VM* vm, CHUNK* chunk);
 Value pop(VM* vm);
 void push(VM* vm, Value v);
