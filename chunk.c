@@ -83,7 +83,7 @@ void write_chunk(CHUNK* chunk, uint8_t byte, int line)
 static int add_constant(CHUNK* chunk, Value value)
 {
     write_value(&chunk->constants, value);
-    return chunk->count - 1;
+    return chunk->constants.count - 1;
 }
 
 void write_constant(CHUNK* chunk, Value value, int line)

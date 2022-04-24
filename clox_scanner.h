@@ -3,6 +3,7 @@
 
 #include "common.h"
 
+
 typedef enum 
 {
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN, TOKEN_LEFT_BRACE, TOKEN_RIGHT_BRACE, TOKEN_COMMA, TOKEN_DOT, TOKEN_MINUS, TOKEN_PLUS, TOKEN_SEMICOLON, TOKEN_SLASH, TOKEN_STAR,
@@ -32,6 +33,15 @@ typedef struct
     int length;
     int line;
 }TOKEN;
+
+
+typedef struct
+{
+    TOKEN current;
+    TOKEN previous;
+    bool had_error;
+    bool panic_mode;
+}PARSER;
 
 void init_scanner(const char* source);
 TOKEN scan_token(SCANNER* scanner);

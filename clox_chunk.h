@@ -4,7 +4,7 @@
 #include "clox_value.h"
 
 #define LINE_INIT -1
-#define MAX_SHORT_CONST_INDEX 255
+#define MAX_SHORT_CONST_INDEX UINT8_MAX
 
 typedef enum{
     OP_RETURN,
