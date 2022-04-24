@@ -1,0 +1,29 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			
+			"type": "cppbuild",
+			"label": "C/C++: gcc.exe Aktive Datei kompilieren",
+			"command": "C:\\msys64\\mingw64\\bin\\gcc.exe",
+			"args": [
+				"-fdiagnostics-color=always",
+				"-g",
+				"${workspaceFolder}\\*.c",
+				"-o",
+				"${fileDirname}\\${fileBasenameNoExtension}.exe"
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"isDefault": true,
+				"kind": "build"
+			},
+			"detail": "Compiler: C:\\msys64\\mingw64\\bin\\gcc.exe"
+		}
+	]
+}

@@ -5,6 +5,8 @@
 #define DEBUG_TRACE_EXECUTION
 
 #include "common.h"
+#include "clox_scanner.h"
+#include "clox_chunk.h"
 
 typedef struct 
 {
@@ -28,7 +30,7 @@ typedef enum
    PREC_PRIMARY // Highest precedence
 }PRECENDENCE;
 
-void compile(const char* source, CHUNK* chunk);
+bool compile(const char* source, CHUNK* chunk);
 
 
 

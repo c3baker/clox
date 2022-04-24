@@ -2,6 +2,7 @@
 #define clox_chunk_h
 
 #include "clox_value.h"
+#include "common.h"
 
 #define LINE_INIT -1
 #define MAX_SHORT_CONST_INDEX UINT8_MAX
@@ -18,8 +19,8 @@ typedef enum{
 }OP_CODE;
 
 typedef struct{
-    int start_line;
-    int* line_counts;
+    int start_line; // The line at which the corresponding CHUNK starts at
+    int* line_counts; //Number of bytecodes corresponding to the line (start_line + offset)
     int max_lines;
     int current_offset;
 }LINE;

@@ -1,4 +1,5 @@
 #include "clox_value.h"
+#include "common.h"
 
 void init_value_array(VALUE_ARRAY* array)
 {
@@ -9,11 +10,7 @@ void init_value_array(VALUE_ARRAY* array)
 
 void free_value_array(VALUE_ARRAY* value_array)
 {
-    if(NULL != FREE_ARRAY(Value, value_array))
-    {
-        exit(1);
-    }
-
+    FREE_ARRAY(value_array->values);
     init_value_array(value_array);
 }
 

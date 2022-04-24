@@ -1,4 +1,4 @@
-#include "common.h"
+#include "clox_chunk.h"
 
 static int add_constant(CHUNK* chunk, Value value);
 
@@ -33,14 +33,7 @@ void write_line(LINE* lines, int line)
 
 void free_chunk_lines(LINE* lines)
 {
-    if(NULL == FREE_ARRAY(int, lines->line_counts))
-    {
-        init_chunk(lines);
-    }
-    else
-    {
-        exit(1); // Error
-    }
+    FREE_ARRAY(lines->line_counts);
 }
 
 void init_chunk(CHUNK* chunk)
@@ -55,15 +48,9 @@ void init_chunk(CHUNK* chunk)
 void free_chunk(CHUNK* chunk)
 {
     free_value_array(&chunk->constants);
-    free_line_array(&chunk->lines);
-    if(NULL == FREE_ARRAY(uint8_t, chunk->code))
-    {
-        init_chunk(chunk);
-    }
-    else
-    {
-        exit(1); // Error
-    }
+    free_chunk_lines(&chunk->lines);
+    FREE_ARRAY(chunk->code);
+    init_chunk(chunk);
 }
 
 void write_chunk(CHUNK* chunk, uint8_t byte, int line)
@@ -88,7 +75,7 @@ static int add_constant(CHUNK* chunk, Value value)
 
 void write_constant(CHUNK* chunk, Value value, int line)
 {
-    int index = add_constant(&chunk->constants, value);
+    int index = add_constant(chunk, value);
 
     if(index > MAX_SHORT_CONST_INDEX)
     {

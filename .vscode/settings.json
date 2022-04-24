@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "common.h": "c",
+        "clox_scanner.h": "c",
+        "clox_compiler.h": "c",
+        "clox_debug.h": "c",
+        "clox_vm.h": "c",
+        "clox_value.h": "c",
+        "stdint.h": "c",
+        "stddef.h": "c",
+        "clox_chunk.h": "c"
+    }
+}

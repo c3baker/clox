@@ -9,7 +9,7 @@
 #define CLOX_VM_H_
 
 #include "common.h"
-#include "clox_debug.h"
+#include "clox_chunk.h"
 
 #define MAX_STACK_SIZE 512
 

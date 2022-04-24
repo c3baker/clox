@@ -2,6 +2,7 @@
 #define clox_debug_h
 
 #include "common.h"
+#include "clox_vm.h"
 
 #define CLOX_DEBUG_MODE
 #define CLOX_TRACING_MODE

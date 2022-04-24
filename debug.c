@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include "common.h"
 #include "clox_debug.h"
+#include "clox_chunk.h"
+#include "clox_value.h"
 
-#
 int simple_instruction(const char* op_name, int offset);
 int constant_instruction(const char* name, const CHUNK* chunk, int offset );
 int get_line_number(const CHUNK* chunk, int offset);
@@ -60,7 +61,7 @@ void disassemble_chunk(const CHUNK* chunk, const char* name)
     printf("== %s == \n", name);
     for(offset = 0; offset < chunk->count;)
     {
-        offset = disassembleInstruction(chunk, offset);
+        offset = disassemble_instruction(chunk, offset);
     }
 }
 
@@ -70,7 +71,7 @@ int disassemble_instruction(const CHUNK* chunk, int offset)
     uint8_t instruction = chunk->code[offset];
 
     printf("%04d", offset);
-    printf(" %4d ", get_line_numer(chunk, offset));
+    printf(" %4d ", get_line_number(chunk, offset));
     switch(instruction)
     {
         case OP_RETURN:

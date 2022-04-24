@@ -1,4 +1,5 @@
 #include "clox_scanner.h"
+#include <string.h>
 
 static bool end_of_source(SCANNER* scanner);
 static TOKEN make_token(SCANNER* scanner, TOKEN_TYPE token_type);
@@ -8,10 +9,12 @@ static bool match(SCANNER* scanner, char match_char);
 static void skip_whitespace(SCANNER* scanner);
 static char peek(SCANNER* scanner);
 static bool is_alpha(char c);
+static bool is_numeric(char c);
 static bool is_alpha_numeric(char c);
 static TOKEN alpha_token(SCANNER* scanner);
 static TOKEN_TYPE determine_identifier_type(SCANNER* scanner);
 static TOKEN string_token(SCANNER* scanner);
+static bool check_keyword(SCANNER* scanner, const char* remaining_keyword, int start, int remaining_len);
 
 void init_scanner(SCANNER* scanner, const char* source)
 {
@@ -68,7 +71,7 @@ static TOKEN error_token(SCANNER* scanner, const char* error_message)
     TOKEN token;
     token.type = TOKEN_ERROR;
     token.start = error_message;
-    token.length = (int)strlne(error_message);
+    token.length = (int)strlen(error_message);
     token.line = scanner->line;
 
     return token;
@@ -198,7 +201,7 @@ static TOKEN alpha_token(SCANNER* scanner)
          advance(scanner);
     }
 
-    return make_token(determine_identifier_type(scanner));
+    return make_token(scanner, determine_identifier_type(scanner));
 }
 static bool check_keyword(SCANNER* scanner, const char* remaining_keyword, int start, int remaining_len)
 {
@@ -217,7 +220,7 @@ static bool check_keyword(SCANNER* scanner, const char* remaining_keyword, int s
 
 static bool end_of_source(SCANNER* scanner)
 {
-    return *(scanner->current) == '/0';
+    return *(scanner->current) == '\0';
 }
 
 static char advance(SCANNER* scanner)

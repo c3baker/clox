@@ -1,6 +1,8 @@
 #include "common.h"
 #include "clox_chunk.h"
 #include "clox_vm.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 static void repl(VM* vm);
 static void run_file(VM* vm, const char* file_path);
@@ -9,7 +11,7 @@ static char* read_file(const char* file_path);
 int main(int argc, const char* argv[])
 {
 
-    VM* vm = init_vm();
+    VM* vm = init_VM();
 
     if(vm == NULL)
     {
@@ -30,7 +32,7 @@ int main(int argc, const char* argv[])
         exit(ERROR_EXIT_CLOX_USAGE);
     }
 
-   free_vm(&vm);
+   free_VM(&vm);
    return 0;
 }
 

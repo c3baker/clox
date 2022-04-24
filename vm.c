@@ -6,6 +6,7 @@
  */
 
 #include "clox_vm.h"
+#include "clox_compiler.h"
 
 static INTERPRET_RESULT run(VM* vm);
 
@@ -53,7 +54,19 @@ void push(VM* vm, Value v)
 
 INTERPRET_RESULT interpret(VM* vm, const char* source)
 {
-    compile(source);
+    CHUNK chunk;
+    init_chunk(&chunk);
+
+
+    if(!compile(source, &chunk))
+    {
+        free_chunk(&chunk);
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    vm->chunk = &chunk;
+    vm->ip = vm->chunk->code;
+    
 }
 
 static INTERPRET_RESULT run(VM* vm)
@@ -72,23 +85,24 @@ static INTERPRET_RESULT run(VM* vm)
     while(1)
     {
 #ifdef CLOX_DEBUG_MODE
-        disassembl_instruction(vm->chunk, vm->ip - vm->chunk->code);
+        disassemble_instruction(vm->chunk, vm->ip - vm->chunk->code);
 #endif
 #ifdef CLOX_TRACING_MODE
         print_stack(vm);
 #endif
         uint8_t instruction = READ_BYTE();
+        Value constant = 0;
         switch(instruction)
         {
             case OP_RETURN:
                 return INTERPRET_OK;
             case OP_CONSTANT:
-                Value constant = READ_CONSTANT();
-                print_value(constant);
+                constant = READ_CONSTANT();
+                push(vm, constant);
                 return INTERPRET_OK;
             case OP_CONSTANT_LONG:
-                Value constant = READ_LONG_CONSTANT();
-                print_value(constant);
+                constant = READ_LONG_CONSTANT();
+                push(vm, constant);
                 return INTERPRET_OK;
             case OP_NEGATE:
                 Value v = pop(vm);
@@ -107,7 +121,7 @@ static INTERPRET_RESULT run(VM* vm)
                 BINARY_OP(-);
                 return INTERPRET_OK;
             default:
-                print("UNKNOWN OP CODE\n");
+                printf("UNKNOWN OP CODE\n");
                 break;
         }
     }

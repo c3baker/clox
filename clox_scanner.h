@@ -43,7 +43,7 @@ typedef struct
     bool panic_mode;
 }PARSER;
 
-void init_scanner(const char* source);
+void init_scanner(SCANNER* scanner, const char* source);
 TOKEN scan_token(SCANNER* scanner);
 
 #endif 

@@ -1,23 +1,29 @@
 #include "clox_compiler.h"
-#include "clox_scanner.h"
-
-#ifdef DEBUG_PRINT_CODE
-#include "clox_debug.h"
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 
-#define GET_PARSER(compiler_ptr) (compiler_ptr->parser)
-#define GET_SCANNER(compiler_ptr) (compiler_ptr->scanner)
-#define GET_TYPE(token_ptr) (token_ptr->type) 
+#ifdef DEBUG_PRINT_CODE
+    #include "clox_debug.h"
+#endif
+
+#define GET_PARSER(compiler_ptr) ((compiler_ptr)->parser)
+#define GET_SCANNER(compiler_ptr) ((compiler_ptr)->scanner)
+#define GET_TYPE(token_ptr) ((token_ptr)->type) 
+
+typedef void (*Parse_fn)(COMPILER* compiler);
+typedef struct 
+{
+    Parse_fn prefix;
+    Parse_fn infix;
+    PRECENDENCE precedence;
+}PARSE_RULE;
 
 static PARSE_RULE* get_rule(TOKEN_TYPE type);
 static void advance(COMPILER* compiler);
 static void error_at(PARSER* parser, TOKEN* token, const char* message);
-static void error(COMPILER* compiler, const char* message);
+static void error(PARSER* parser, const char* message);
 static void consume(COMPILER* compiler, TOKEN_TYPE type, const char* message);
-static void emit_byte(uint8_t byte);
+static void emit_byte(COMPILER* compiler, uint8_t byte);
 static void emit_return(COMPILER* compiler);
 static void emit_bytes(COMPILER* compiler, uint8_t byte_1, uint8_t byte_2);
 static void emit_constant(COMPILER* compiler, double constant_value);
@@ -27,14 +33,6 @@ static void number(COMPILER* compiler);
 static void grouping(COMPILER* compiler);
 static void unary(COMPILER* compiler);
 static void binary(COMPILER* compiler);
-
-typedef void (*Parse_fn)(COMPILER* compiler);
-typedef struct 
-{
-    Parse_fn prefix;
-    Parse_fn infix;
-    PRECENDENCE precedence;
-}PARSE_RULE;
 
 /* PRATT PARSER TABLE 
  */
@@ -84,21 +82,22 @@ PARSE_RULE rules[] = {
 static void parse_precedence(COMPILER* compiler, PRECENDENCE precedence)
 {
     advance(compiler);
-    Parse_fn prefix_rule = get_rule(GET_TYPE(&GET_PARSER(compiler)->previous))->prefix;
+    PARSER* parser = GET_PARSER(compiler);
+    Parse_fn prefix_rule = get_rule(GET_TYPE(&parser->previous))->prefix;
     if(prefix_rule == NULL)
     {
-        error(GET_PARSER(compiler), "Expected expression");
+        error(parser, "Expected expression");
         return;
     }
 
     prefix_rule(compiler);
 
-    while(precedence <= get_rule(GET_TYPE(&GET_PARSER(compiler)->previous))->precedence)
+    while(precedence <= get_rule(GET_TYPE(&parser->previous))->precedence)
     {
-        Parse_fn infix_rule = get_rule(GET_TYPE(&GET_PARSER(compiler)->previous))->infix;
+        Parse_fn infix_rule = get_rule(GET_TYPE(&parser->previous))->infix;
         if(infix_rule == NULL)
         {
-            error(GET_PARSER(compiler), "Expected expression");
+            error(parser, "Expected expression");
             return;
         }
         infix_rule(compiler);
@@ -112,7 +111,7 @@ static PARSE_RULE* get_rule(TOKEN_TYPE type)
 
 static void expression(COMPILER* compiler)
 {
-    parse_precendence(compiler, PREC_ASSIGN); //Parse all expressions of precedence PERC_ASSIGN or higher
+    parse_precedence(compiler, PREC_ASSIGN); //Parse all expressions of precedence PERC_ASSIGN or higher
 }
 
 static void number(COMPILER* compiler)
@@ -131,7 +130,7 @@ static void unary(COMPILER* compiler)
 {
     TOKEN* operator = &GET_PARSER(compiler)->previous;
 
-    parse_precendence(compiler, PREC_UNARY); // First push the expression onto the VM stack
+    parse_precedence(compiler, PREC_UNARY); // First push the expression onto the VM stack
 
     if(GET_TYPE(operator) == TOKEN_MINUS)
     {
@@ -144,7 +143,7 @@ static void binary(COMPILER* compiler)
 {
     TOKEN* operator = &GET_PARSER(compiler)->previous;
     PARSE_RULE* rule = get_rule(GET_TYPE(operator));
-    parse_precendence((PRECENDENCE)rule->precedence + 1);
+    parse_precedence(compiler, (PRECENDENCE)rule->precedence + 1);
          
     switch(GET_TYPE(operator))
     {
@@ -222,7 +221,7 @@ static void init_compiler(COMPILER* compiler, SCANNER* scanner, PARSER* parser, 
     compiler->scanner = scanner;
 }
 
-void compile(const char* source, CHUNK* chunk)
+bool compile(const char* source, CHUNK* chunk)
 {
     SCANNER scanner = {0};
     PARSER parser = {0};
@@ -259,12 +258,12 @@ void compile(const char* source, CHUNK* chunk)
            disassemble_chunk(compiler.compiling_chunk, "code");
        }
     #endif
-    return  !parser.had_error;
+    return !parser.had_error;
 }
 
 static void emit_constant(COMPILER* compiler, double constant_value)
 {
-    write_constant(compiler->compiling_chunk, constant_value);
+    write_constant(compiler->compiling_chunk, constant_value, GET_PARSER(compiler)->previous.line);
 }
 
 static void emit_bytes(COMPILER* compiler, uint8_t byte_1, uint8_t byte_2)
