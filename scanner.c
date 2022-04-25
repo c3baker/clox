@@ -33,7 +33,6 @@ TOKEN scan_token(SCANNER* scanner)
     if(end_of_source(scanner)) return make_token(scanner, TOKEN_EOF);
 
     char c = advance(scanner);
-    printf("Symbol %c\n", c);
     if(is_alpha(c))
     {
         // Could be identifier or keyword
@@ -43,6 +42,7 @@ TOKEN scan_token(SCANNER* scanner)
     {
         return numeric_token(scanner);
     }
+
     switch(c)
     {
         case '(' : return make_token(scanner, TOKEN_LEFT_PAREN);
@@ -61,10 +61,9 @@ TOKEN scan_token(SCANNER* scanner)
         case '<' : return make_token(scanner, match(scanner, '=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
         case '=' : return make_token(scanner, match(scanner, '=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
         case '"' : return string_token(scanner);
-        case '\0': return make_token(scanner, TOKEN_EOF);
+        case NULL_TERMINATOR: return make_token(scanner, TOKEN_EOF);
     }
-    
-    printf("%c\n", c);
+    printf("Error token %d\n", (int)c);
     return error_token(scanner, "CLOX unexpected symbol");
 
 }
@@ -258,6 +257,7 @@ static void skip_whitespace(SCANNER* scanner)
             case ' ':
             case '\r':
             case '\t':
+            case '\n':
                 advance(scanner);
                 break;
             default:
@@ -278,7 +278,6 @@ static bool is_alpha(char c)
 
 static bool is_numeric(char c)
 {
-    printf("%d\n", (int)c);
     return ((c >= '0') && (c <= '9'));
 }
 

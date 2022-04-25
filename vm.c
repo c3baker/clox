@@ -54,9 +54,9 @@ void push(VM* vm, Value v)
 
 INTERPRET_RESULT interpret(VM* vm, const char* source)
 {
-    CHUNK chunk;
+    CHUNK chunk = {0};
+    INTERPRET_RESULT result = 0;
     init_chunk(&chunk);
-
 
     if(!compile(source, &chunk))
     {
@@ -66,7 +66,12 @@ INTERPRET_RESULT interpret(VM* vm, const char* source)
 
     vm->chunk = &chunk;
     vm->ip = vm->chunk->code;
-    
+
+    result = run(vm);
+
+    free_chunk(&chunk);
+
+    return result;    
 }
 
 static INTERPRET_RESULT run(VM* vm)

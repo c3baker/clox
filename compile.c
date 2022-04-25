@@ -81,9 +81,11 @@ PARSE_RULE rules[] = {
 
 static void parse_precedence(COMPILER* compiler, PRECENDENCE precedence)
 {
-    advance(compiler);
     PARSER* parser = GET_PARSER(compiler);
-    Parse_fn prefix_rule = get_rule(GET_TYPE(&parser->previous))->prefix;
+    Parse_fn prefix_rule;
+    advance(compiler);
+    printf("Prefix Token %d\n", GET_TYPE(&parser->previous));
+    prefix_rule = get_rule(GET_TYPE(&parser->previous))->prefix;;
     if(prefix_rule == NULL)
     {
         error(parser, "Expected expression");
@@ -92,9 +94,12 @@ static void parse_precedence(COMPILER* compiler, PRECENDENCE precedence)
 
     prefix_rule(compiler);
 
-    while(precedence <= get_rule(GET_TYPE(&parser->previous))->precedence)
+    while(precedence <= get_rule(GET_TYPE(&parser->current))->precedence)
     {
-        Parse_fn infix_rule = get_rule(GET_TYPE(&parser->previous))->infix;
+        Parse_fn infix_rule;
+        advance(compiler);
+        printf("Infix Token %d\n", GET_TYPE(&parser->previous));
+        infix_rule = get_rule(GET_TYPE(&parser->previous))->infix;
         if(infix_rule == NULL)
         {
             error(parser, "Expected expression");
@@ -117,6 +122,7 @@ static void expression(COMPILER* compiler)
 static void number(COMPILER* compiler)
 {
     double value = strtod(GET_PARSER(compiler)->previous.start, NULL);
+    printf("Number Double %f\n", value);
     emit_constant(compiler, value);
 }
 
@@ -143,11 +149,13 @@ static void binary(COMPILER* compiler)
 {
     TOKEN* operator = &GET_PARSER(compiler)->previous;
     PARSE_RULE* rule = get_rule(GET_TYPE(operator));
+    printf("Operator %d\n", operator->type);
     parse_precedence(compiler, (PRECENDENCE)rule->precedence + 1);
          
     switch(GET_TYPE(operator))
     {
         case TOKEN_PLUS:
+            printf("OP ADD\n");
             emit_byte(compiler, OP_ADD);
             break;
         case TOKEN_MINUS:
@@ -232,24 +240,6 @@ bool compile(const char* source, CHUNK* chunk)
     compiler.compiling_chunk = chunk;
     advance(&compiler);
     expression(&compiler);
-
-    while(true)
-    {
-        TOKEN token = scan_token(GET_SCANNER((&compiler)));
-        if(token.line != line)
-        {
-            printf("%4d", token.line);
-            line = token.line;
-        }
-        else
-        {
-            printf("    |");
-        }
-        printf("%2d '%.*s'\n", token.type, token.length, token.start); // %.*s means token.length is passed as the "precision" argument to tell how many chars to print
-
-        if(token.type == TOKEN_EOF) break;
-    }
-
     consume(&compiler, TOKEN_EOF, "Expected end of expression.");
     emit_return(&compiler);
     #ifdef DEBUG_PRINT_CODE
