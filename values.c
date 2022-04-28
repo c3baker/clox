@@ -23,5 +23,5 @@ void write_value(VALUE_ARRAY* value_array, Value value)
         value_array->capacity = new_capacity;
     }
 
-    value_array->values[++value_array->count] = value;
+    value_array->values[value_array->count++] = value;
 }

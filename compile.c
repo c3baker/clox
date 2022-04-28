@@ -147,12 +147,12 @@ static void unary(COMPILER* compiler)
 
 static void binary(COMPILER* compiler)
 {
-    TOKEN* operator = &GET_PARSER(compiler)->previous;
-    PARSE_RULE* rule = get_rule(GET_TYPE(operator));
-    printf("Operator %d\n", operator->type);
+    TOKEN operator = GET_PARSER(compiler)->previous;
+    PARSE_RULE* rule = get_rule(GET_TYPE(&operator));
+    printf("Operator %d\n", operator.type);
     parse_precedence(compiler, (PRECENDENCE)rule->precedence + 1);
          
-    switch(GET_TYPE(operator))
+    switch(GET_TYPE(&operator))
     {
         case TOKEN_PLUS:
             printf("OP ADD\n");
@@ -234,7 +234,6 @@ bool compile(const char* source, CHUNK* chunk)
     SCANNER scanner = {0};
     PARSER parser = {0};
     COMPILER compiler = {0};
-    int line = -1;
 
     init_compiler(&compiler, &scanner, &parser, source);
     compiler.compiling_chunk = chunk;

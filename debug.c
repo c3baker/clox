@@ -65,6 +65,33 @@ void disassemble_chunk(const CHUNK* chunk, const char* name)
     }
 }
 
+void print_stack(const VM* vm)
+{
+}
+
+int binary_instruction(uint8_t binary_instruction, int offset)
+{
+    switch(binary_instruction)
+    {
+        case OP_ADD:
+            printf(" ADD\n");
+            break;
+        case OP_SUB:
+            printf(" SUB\n");
+            break;
+        case OP_DIV:
+            printf(" DIV\n");
+            break;
+        case OP_MULTIPLY:
+            printf(" MULT\n");
+            break;
+        default:
+            printf(" Unknonw Binary Instr\n");
+            break;
+    }
+
+    return offset + 1;
+}
 
 int disassemble_instruction(const CHUNK* chunk, int offset)
 {
@@ -76,16 +103,18 @@ int disassemble_instruction(const CHUNK* chunk, int offset)
     {
         case OP_RETURN:
             return simple_instruction("OP_RETURN", offset);
-            break;
         case OP_CONSTANT:
             return constant_instruction("OP_CONSTANT", chunk, offset);
-            break;
         case OP_CONSTANT_LONG:
             return constant_long_instruction("OP_CONSTANT_LONG", chunk, offset);
-            break;
+        case OP_ADD:
+        case OP_SUB:
+        case OP_DIV:
+        case OP_MULTIPLY:
+            return binary_instruction(instruction, offset);
         default:
-        printf("Unknown opcode %d\n", instruction);
-        return offset + 1; 
+            printf("Unknown opcode %d\n", instruction);
+            return offset + 1; 
     }
 
 }

@@ -62,14 +62,18 @@ void write_chunk(CHUNK* chunk, uint8_t byte, int line)
         chunk->capactiy = new_capacity;
     }
 
-    chunk->code[++chunk->count] = byte;
+    printf("Count %d Byte %d\n", chunk->count, byte);
+
+    chunk->code[chunk->count++] = byte;
     write_line(&chunk->lines, line);
 }
 
 
 static int add_constant(CHUNK* chunk, Value value)
 {
+    printf("Write constant value %g\n", value);
     write_value(&chunk->constants, value);
+    
     return chunk->constants.count - 1;
 }
 
