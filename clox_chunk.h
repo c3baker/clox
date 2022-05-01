@@ -4,7 +4,7 @@
 #include "clox_value.h"
 #include "common.h"
 
-#define LINE_INIT -1
+#define LINE_INIT 1
 #define MAX_SHORT_CONST_INDEX UINT8_MAX
 
 typedef enum{
@@ -15,7 +15,11 @@ typedef enum{
     OP_MULTIPLY,
     OP_DIV,
     OP_SUB,
-    OP_NEGATE
+    OP_NEGATE,
+    OP_TRUE,
+    OP_FALSE,
+    OP_NIL,
+    OP_NOT
 }OP_CODE;
 
 typedef struct{
@@ -40,5 +44,6 @@ void init_chunk(CHUNK* chunk);
 void write_chunk(CHUNK* chunk, uint8_t byte, int line);
 void free_chunk(CHUNK* chunk);
 void write_constant(CHUNK* chunk, Value value, int line);
+int get_code_line(CHUNK* chunk, int code_index);
 
 #endif

@@ -62,17 +62,17 @@ PARSE_RULE rules[] = {
     [TOKEN_AND] = {NULL, NULL, PREC_NONE},
     [TOKEN_CLASS] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
-    [TOKEN_FALSE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
     [TOKEN_FUN] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
-    [TOKEN_NIL] = {NULL, NULL, PREC_NONE},
+    [TOKEN_NIL] = {literal, NULL, PREC_NONE},
     [TOKEN_OR] = {NULL, NULL, PREC_NONE},
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
     [TOKEN_THIS] = {NULL, NULL, PREC_NONE},
-    [TOKEN_TRUE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
     [TOKEN_ERROR] = {NULL, NULL, PREC_NONE},
@@ -173,6 +173,25 @@ static void binary(COMPILER* compiler)
 
 }
 
+static void literal(COMPILER* compiler)
+{
+    TOKEN prev = GET_PARSER(compiler)->previous;
+    switch(GET_TYPE(&prev))
+    {
+        case TOKEN_NIL:
+            emit_byte(compiler, OP_NIL);
+            break;
+        case TOKEN_TRUE:
+            emit_byte(compiler, OP_TRUE);
+            break;
+        case TOKEN_FALSE:
+            emit_byte(compiler, OP_FALSE);
+            break;
+        default:
+            return;           
+    };
+}
+
 static void consume(COMPILER* compiler, TOKEN_TYPE type, const char* message)
 {
     if(GET_PARSER(compiler)->current.type == type)
@@ -252,7 +271,7 @@ bool compile(const char* source, CHUNK* chunk)
 
 static void emit_constant(COMPILER* compiler, double constant_value)
 {
-    write_constant(compiler->compiling_chunk, constant_value, GET_PARSER(compiler)->previous.line);
+    write_constant(compiler->compiling_chunk, NUMERIC_VAL(constant_value), GET_PARSER(compiler)->previous.line);
 }
 
 static void emit_bytes(COMPILER* compiler, uint8_t byte_1, uint8_t byte_2)

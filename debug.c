@@ -37,7 +37,7 @@ void print_constant(const char* name, const CHUNK* chunk, int constant_index)
 {
     Value constant = chunk->constants.values[constant_index];
     printf("%-16s %4d '", name, constant_index);
-    printf("%g\n", constant);
+    printf("%g\n", AS_NUMERIC(constant));
 }
 
 int constant_instruction(const char* name, const CHUNK* chunk, int offset )
@@ -112,6 +112,14 @@ int disassemble_instruction(const CHUNK* chunk, int offset)
         case OP_DIV:
         case OP_MULTIPLY:
             return binary_instruction(instruction, offset);
+        case OP_TRUE:
+            return simple_instruction("OP_TRUE", offset);
+        case OP_FALSE:
+            return simple_instruction("OP_FALSE", offset);
+        case OP_NIL:
+            return simple_instruction("OP_NIL", offset);
+        case OP_NOT:
+            return simple_instruction("OP_NOT", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1; 

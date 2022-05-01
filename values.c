@@ -25,3 +25,20 @@ void write_value(VALUE_ARRAY* value_array, Value value)
 
     value_array->values[value_array->count++] = value;
 }
+
+void print_value(Value value)
+{
+    switch(value.type)
+    {
+        case VAL_BOOL:
+            printf(AS_BOOL(value) ? "true" : "false");
+            break;
+        case VAL_NIL:
+            printf("nil");
+            break;
+        case VAL_NUMERIC:
+            printf("%g", AS_NUMERIC(value));
+            break;
+       
+    };
+}

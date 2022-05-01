@@ -31,6 +31,22 @@ void write_line(LINE* lines, int line)
     lines->line_counts[offset]++;
 }
 
+
+int get_code_line(CHUNK* chunk, int code_index)
+{
+    int op_code_count  = 0;
+    int index = 0;
+    LINE* lines = &chunk->lines;
+
+    while(op_code_count < code_index )
+    {
+        op_code_count += lines->line_counts[index++];
+    }
+
+    return lines->start_line + (index - 1);    
+}
+
+
 void free_chunk_lines(LINE* lines)
 {
     FREE_ARRAY(lines->line_counts);
@@ -71,7 +87,6 @@ void write_chunk(CHUNK* chunk, uint8_t byte, int line)
 
 static int add_constant(CHUNK* chunk, Value value)
 {
-    printf("Write constant value %g\n", value);
     write_value(&chunk->constants, value);
     
     return chunk->constants.count - 1;
