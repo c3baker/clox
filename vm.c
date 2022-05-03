@@ -13,6 +13,31 @@ static INTERPRET_RESULT run(VM* vm);
 static Value peek(VM* vm, int distance);
 static void runtime_error(VM* vm, const char* format, ...);
 static bool is_falsey(Value value);
+static bool values_equal(Value a, Value b);
+
+static bool values_equal(Value a, Value b)
+{
+    if(a.type != b.type)
+    {
+        /* Allow NIL and 0 to be equal */
+        if(IS_NIL(a) && (IS_NUMERIC(b) && AS_NUMERIC(b) == 0)) return true;
+        if(IS_NIL(b) && (IS_NUMERIC(a) && AS_NUMERIC(a) == 0)) return true;
+        return false;
+    }
+    
+    switch(a.type)
+    {
+        case VAL_BOOL:
+            return AS_BOOL(a) == AS_BOOL(b);
+        case VAL_NUMERIC:
+            return AS_NUMERIC(a) == AS_NUMERIC(b);
+        case VAL_NIL:
+            return true; // Both are NIL so they are equal
+        default:
+           return false;
+    }
+}
+
 
 VM* init_VM(void)
 {
@@ -160,6 +185,18 @@ static INTERPRET_RESULT run(VM* vm)
                 return INTERPRET_OK;     
             case OP_NOT:
                 push(vm, BOOL_VAL(is_falsey(pop(vm))));
+                return INTERPRET_OK;     
+            case OP_EQUAL:
+                Value a = pop(vm);
+                Value b = pop(vm);
+                push(vm, BOOL_VAL(values_equal(a, b)));
+                return INTERPRET_OK;     
+            case OP_LESS:
+                BINARY_OP(vm, BOOL_VAL, <);
+                return INTERPRET_OK;     
+            case OP_GREATER:
+                BINARY_OP(vm, BOOL_VAL, >);
+                return INTERPRET_OK;     
                   
             default:
                 printf("UNKNOWN OP CODE\n");
