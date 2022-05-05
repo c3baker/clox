@@ -6,7 +6,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "mem.h"
+#include <string.h>
+
+#include "clox_memory.h"
 
 #define ERROR_EXIT_SOURCE_FILE_ERROR 74
 #define ERROR_EXIT_CLOX_USAGE 64

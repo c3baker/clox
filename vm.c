@@ -7,6 +7,7 @@
 
 #include "clox_vm.h"
 #include "clox_compiler.h"
+#include "clox_object.h"
 #include <stdarg.h>
 
 static INTERPRET_RESULT run(VM* vm);
@@ -33,6 +34,8 @@ static bool values_equal(Value a, Value b)
             return AS_NUMERIC(a) == AS_NUMERIC(b);
         case VAL_NIL:
             return true; // Both are NIL so they are equal
+        case VAL_OBJ:
+             return object_compare(AS_OBJ(a), AS_OBJ(b));
         default:
            return false;
     }

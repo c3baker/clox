@@ -126,7 +126,7 @@ static TOKEN_TYPE determine_identifier_type(SCANNER* scanner)
             if(check_keyword(scanner, "nd", 1, 2)) return TOKEN_AND;    
             break;      
         case 'b':
-            if(check_keyword(scanner, "reak", 1, 4)) return TOKEN_BREAK;
+            if(check_keyword(scanner, "break", 1, 4)) return TOKEN_BREAK;
             break;
         case 'c':
             if(check_keyword(scanner, "lass", 1, 4)) return TOKEN_CLASS;

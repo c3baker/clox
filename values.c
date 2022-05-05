@@ -1,5 +1,4 @@
 #include "clox_value.h"
-#include "common.h"
 
 void init_value_array(VALUE_ARRAY* array)
 {
@@ -39,6 +38,8 @@ void print_value(Value value)
         case VAL_NUMERIC:
             printf("%g", AS_NUMERIC(value));
             break;
-       
+        case VAL_OBJ:
+            print_object(value);
+            break;
     };
 }

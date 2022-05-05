@@ -1,4 +1,5 @@
 #include "clox_compiler.h"
+#include "clox_object.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -26,13 +27,14 @@ static void consume(COMPILER* compiler, TOKEN_TYPE type, const char* message);
 static void emit_byte(COMPILER* compiler, uint8_t byte);
 static void emit_return(COMPILER* compiler);
 static void emit_bytes(COMPILER* compiler, uint8_t byte_1, uint8_t byte_2);
-static void emit_constant(COMPILER* compiler, double constant_value);
+static void emit_constant(COMPILER* compiler, Value constant_value);
 static void expression(COMPILER* compiler);
 static void prase_precedence(COMPILER* compiler, PRECENDENCE precedence);
 static void number(COMPILER* compiler);
 static void grouping(COMPILER* compiler);
 static void unary(COMPILER* compiler);
 static void binary(COMPILER* compiler);
+static void string(COMPILER* compiler);
 
 /* PRATT PARSER TABLE 
  */
@@ -56,8 +58,8 @@ PARSE_RULE rules[] = {
     [TOKEN_GREATER_EQUAL] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_COMPARISON},
-    [TOKEN_IDENTIFIER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_STRING] = {NULL, NULL, PREC_NONE},
+    [TOKEN_IDENTIFIER] = {NULL, NULL, PREC_PRIMARY},
+    [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMERIC] = {number, NULL, PREC_NONE},
     [TOKEN_AND] = {NULL, NULL, PREC_NONE},
     [TOKEN_CLASS] = {NULL, NULL, PREC_NONE},
@@ -123,7 +125,19 @@ static void number(COMPILER* compiler)
 {
     double value = strtod(GET_PARSER(compiler)->previous.start, NULL);
     printf("Number Double %f\n", value);
-    emit_constant(compiler, value);
+    emit_constant(compiler, NUMERIC_VAL(value));
+}
+
+static void string(COMPILER* compiler)
+{
+   char* str = GET_PARSER(compiler)->previous.start + 1;  //Skip the leading double-quote
+   size_t str_len = GET_PARSER(compiler)->previous.length - 2; // Remove the start and end double-quotes of the string
+   CLOX_STRING* str_obj = ALLOCATE_STRING_OBJ(str_len + 1); // +1 so there is space to add a null terminator
+
+   str_obj->len = str_len;
+   memcpy(str_obj->c_string, str, str_len);
+   str_obj->c_string[str_len] = NULL_TERMINATOR;
+   emit_constant(compiler, OBJ_VAL(str_obj));
 }
 
 static void grouping(COMPILER* compiler)
@@ -287,9 +301,9 @@ bool compile(const char* source, CHUNK* chunk)
     return !parser.had_error;
 }
 
-static void emit_constant(COMPILER* compiler, double constant_value)
+static void emit_constant(COMPILER* compiler, Value constant_value)
 {
-    write_constant(compiler->compiling_chunk, NUMERIC_VAL(constant_value), GET_PARSER(compiler)->previous.line);
+    write_constant(compiler->compiling_chunk, constant_value, GET_PARSER(compiler)->previous.line);
 }
 
 static void emit_bytes(COMPILER* compiler, uint8_t byte_1, uint8_t byte_2)
