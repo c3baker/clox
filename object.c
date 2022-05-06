@@ -7,6 +7,27 @@
 
 #include "clox_object.h"
 
+#define OBJ_AS_STRING(o_ptr) ((CLOX_STRING*)o_ptr)
+#define CLOX_STRING_SIZE(len) sizeof(CLOX_STRING) + ((len + 1) *sizeof(char))  // +1 so there is space to add a null terminator
+static OBJ* allocate_object(size_t size, OBJ_TYPE type);
+
+OBJ* new_string_object(size_t len, char* str_content)
+{
+    OBJ* str_obj =  allocate_object(CLOX_STRING_SIZE(len), OBJ_STRING);
+    CLOX_STRING* clox_string = OBJ_AS_STRING(str_obj);
+
+    clox_string->len = len;
+    memcpy(clox_string->c_string, str_content, len);
+    clox_string->c_string[len] = NULL_TERMINATOR;
+    return str_obj;
+}
+
+static OBJ* allocate_object(size_t size, OBJ_TYPE type)
+{
+   OBJ* obj = reallocate(NULL, 0, size);
+   obj->type = type;
+   return obj;
+}
 
 
 bool object_compare(OBJ* a, OBJ* b)
@@ -45,4 +66,11 @@ void print_object(OBJ* o)
     };
 }
 
+OBJ* concatenate_strings(CLOX_STRING* str_1, CLOX_STRING* str_2)
+{
+    reallocate(str_1, CLOX_STRING_SIZE(str_1->len), CLOX_STRING_SIZE(str_1->len + str_2->len)); //Extend String 1 to fit String 2
+    memcpy(str_1->c_string[str_1->len], str_2->c_string, str_2->len + 1); // Copy the NULL Terminator, reallocate() should create enough space
+    str_1->len += str_2->len;
+    return (OBJ*)str_1;
+}
 

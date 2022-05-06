@@ -17,8 +17,9 @@ typedef struct
 {
    CHUNK* chunk;
    uint8_t* ip;
-   Value value_stack[MAX_STACK_SIZE];
    Value* stack_top;
+   OBJ* objects;
+   Value value_stack[MAX_STACK_SIZE];
 }VM;
 
 typedef enum

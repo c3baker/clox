@@ -7,7 +7,6 @@
 
 #include "clox_vm.h"
 #include "clox_compiler.h"
-#include "clox_object.h"
 #include <stdarg.h>
 
 static INTERPRET_RESULT run(VM* vm);
@@ -52,6 +51,7 @@ VM* init_VM(void)
 
     vm->stack_top = vm->value_stack;
     vm->ip = NULL;
+    vm->objects = NULL;
     
     return vm;
 }
@@ -127,7 +127,7 @@ static INTERPRET_RESULT run(VM* vm)
 #define READ_BYTE(_vm) (*_vm->ip++)
 #define READ_CONSTANT(_vm) (_vm->chunk->constants.values[READ_BYTE(_vm)])
 #define READ_LONG_CONSTANT(_vm) (_vm->chunk->constants.values[(READ_BYTE(_vm) | READ_BYTE(_vm)<<8 | READ_BYTE(_vm)<<16)])
-#define BINARY_OP(_vm, VALUE_TYPE, op) \
+#define NUMERIC_BINARY_OP(_vm, VALUE_TYPE, op) \
         do{ \
            if(!IS_NUMERIC(peek(_vm, 0)) || !IS_NUMERIC(peek(_vm, 1))) \
            { \
@@ -166,16 +166,23 @@ static INTERPRET_RESULT run(VM* vm)
                 push(vm, NUMERIC_VAL(-AS_NUMERIC(v)));
                 return INTERPRET_OK;
             case OP_ADD:
-                BINARY_OP(vm, NUMERIC_VAL, +);
+                if(IS_STRING(peek(vm, 0)) && IS_STRING(peek(vm, 1)))
+                {
+                    string_plus_op(vm);
+                }
+                else
+                {
+                    NUMERIC_BINARY_OP(vm, NUMERIC_VAL, +);
+                }
                 return INTERPRET_OK;
             case OP_MULTIPLY:
-                BINARY_OP(vm, NUMERIC_VAL, *);
+                NUMERIC_BINARY_OP(vm, NUMERIC_VAL, *);
                 return INTERPRET_OK;
             case OP_DIV:
-                BINARY_OP(vm, NUMERIC_VAL, /);
+                NUMERIC_BINARY_OP(vm, NUMERIC_VAL, /);
                 return INTERPRET_OK;
             case OP_SUB:
-                BINARY_OP(vm, NUMERIC_VAL, -);
+                NUMERIC_BINARY_OP(vm, NUMERIC_VAL, -);
                 return INTERPRET_OK;
             case OP_TRUE:
                 push(vm, BOOL_VAL(true));
@@ -195,19 +202,18 @@ static INTERPRET_RESULT run(VM* vm)
                 push(vm, BOOL_VAL(values_equal(a, b)));
                 return INTERPRET_OK;     
             case OP_LESS:
-                BINARY_OP(vm, BOOL_VAL, <);
+                NUMERIC_BINARY_OP(vm, BOOL_VAL, <);
                 return INTERPRET_OK;     
             case OP_GREATER:
-                BINARY_OP(vm, BOOL_VAL, >);
-                return INTERPRET_OK;     
-                  
+                NUMERIC_BINARY_OP(vm, BOOL_VAL, >);
+                return INTERPRET_OK;
             default:
                 printf("UNKNOWN OP CODE\n");
                 break;
         }
     }
 
-#undef BINARY_OP
+#undef NUMERIC_BINARY_OP
 #undef READ_LONG_CONSTANT
 #undef READ_CONSTANT
 #undef READ_BYTE
@@ -221,4 +227,13 @@ static Value peek(VM* vm, int distance)
 static bool is_falsey(Value value)
 {
     return IS_NIL(value) || (IS_BOOL(value) && AS_BOOL(value) == false);
+}
+
+static void string_plus_op(VM* vm)
+{
+    Value str_1 = pop(vm);
+    Value str_2 = pop(vm);
+
+    Value result_str = OBJ_VAL(concatenate_strings(AS_STRING(str_1), AS_STRING(str_2)));
+    push(vm, result_str);
 }

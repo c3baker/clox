@@ -16,7 +16,7 @@ typedef enum{
 }OBJ_TYPE;
 
 #define GET_OBJ_TYPE(o_ptr)  (o_ptr->type)
-#define ALLOCATE_STRING_OBJ(len) (CLOX_STRING*)reallocate(NULL, 0, sizeof(CLOX_STRING) + (len*sizeof(char)))
+#define NEW_STRING(len, c_string) (CLOX_STRING*)new_string_object(len, c_string);
 
 struct obj
 {
@@ -34,5 +34,6 @@ typedef struct string_obj
 
 bool object_compare(OBJ* a, OBJ* b);
 void print_object(OBJ* o);
-
+OBJ* concatenate_strings(CLOX_STRING* str_1, CLOX_STRING* str_2);
+OBJ* new_string_object(size_t len, char* str_content);
 #endif /* CLOX_OBJECT_H_ */

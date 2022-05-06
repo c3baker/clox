@@ -132,11 +132,7 @@ static void string(COMPILER* compiler)
 {
    char* str = GET_PARSER(compiler)->previous.start + 1;  //Skip the leading double-quote
    size_t str_len = GET_PARSER(compiler)->previous.length - 2; // Remove the start and end double-quotes of the string
-   CLOX_STRING* str_obj = ALLOCATE_STRING_OBJ(str_len + 1); // +1 so there is space to add a null terminator
-
-   str_obj->len = str_len;
-   memcpy(str_obj->c_string, str, str_len);
-   str_obj->c_string[str_len] = NULL_TERMINATOR;
+   CLOX_STRING* str_obj = NEW_STRING(str_len, str);
    emit_constant(compiler, OBJ_VAL(str_obj));
 }
 
