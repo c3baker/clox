@@ -87,7 +87,7 @@ static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence)
     Parse_fn prefix_rule;
     advance(compiler);
     printf("Prefix Token %d\n", GET_TYPE(&parser->previous));
-    prefix_rule = get_rule(GET_TYPE(&parser->previous))->prefix;;
+    prefix_rule = get_rule(GET_TYPE(&parser->previous))->prefix;
     if(prefix_rule == NULL)
     {
         error(parser, "Expected expression");
@@ -133,6 +133,7 @@ static void string(COMPILER* compiler)
    char* str = GET_PARSER(compiler)->previous.start + 1;  //Skip the leading double-quote
    size_t str_len = GET_PARSER(compiler)->previous.length - 2; // Remove the start and end double-quotes of the string
    CLOX_STRING* str_obj = NEW_STRING(GET_VM(compiler), str_len, str);
+   printf("String\n");
    emit_constant(compiler, OBJ_VAL(str_obj));
 }
 

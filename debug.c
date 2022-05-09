@@ -2,7 +2,7 @@
 #include "common.h"
 #include "clox_debug.h"
 #include "clox_chunk.h"
-#include "clox_value.h"
+#include "clox_object.h"
 
 int simple_instruction(const char* op_name, int offset);
 int constant_instruction(const char* name, const CHUNK* chunk, int offset );
@@ -37,7 +37,21 @@ void print_constant(const char* name, const CHUNK* chunk, int constant_index)
 {
     Value constant = chunk->constants.values[constant_index];
     printf("%-16s %4d '", name, constant_index);
-    printf("%g\n", AS_NUMERIC(constant));
+    switch(constant.type)
+    {
+        case VAL_NUMERIC:
+             printf("%g\n", AS_NUMERIC(constant));  
+             break;
+        case VAL_OBJ:
+             print_object(AS_OBJECT(constant));
+             break;
+        case VAL_NIL:
+             printf("NIL\n");
+             break;
+        default:
+            printf("--Unknown Type--\n");
+            break; 
+    }
 }
 
 int constant_instruction(const char* name, const CHUNK* chunk, int offset )

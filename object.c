@@ -43,7 +43,6 @@ void free_object(OBJ* object)
     free(object);
 }
 
-
 bool object_compare(OBJ* a, OBJ* b)
 {
     CLOX_STRING* str_a = NULL;
@@ -75,7 +74,7 @@ void print_object(OBJ* o)
     switch(GET_OBJ_TYPE(o))
     {
         case OBJ_STRING:
-            printf("CLOX STR: %s", ((CLOX_STRING*)o)->c_string);
+            printf("CLOX STR: %s\n", ((CLOX_STRING*)o)->c_string);
             break;
         default:
             return;
@@ -85,7 +84,7 @@ void print_object(OBJ* o)
 OBJ* concatenate_strings(CLOX_STRING* str_1, CLOX_STRING* str_2)
 {
     reallocate(str_1, CLOX_STRING_SIZE(str_1->len), CLOX_STRING_SIZE(str_1->len + str_2->len)); //Extend String 1 to fit String 2
-    memcpy((void*)str_1->c_string[str_1->len], (void*)str_2->c_string, str_2->len + 1); // Copy the NULL Terminator, reallocate() should create enough space
+    memcpy((void*)(&str_1->c_string[str_1->len]), (void*)str_2->c_string, str_2->len + 1); // Copy the NULL Terminator, reallocate() should create enough space
     str_1->len += str_2->len;
     return (OBJ*)str_1;
 }
