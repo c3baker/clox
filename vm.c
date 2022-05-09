@@ -17,6 +17,7 @@ static bool is_falsey(Value value);
 static bool values_equal(Value a, Value b);
 static void string_plus_op(VM* vm);
 static void reset_stack(VM* vm);
+static void free_vm_objects(VM* vm);
 
 static void reset_stack(VM* vm)
 {
@@ -64,8 +65,21 @@ VM* init_VM(void)
     return vm;
 }
 
+static void free_vm_objects(VM* vm)
+{
+    OBJ* object = vm->objects;
+
+    while(object != NULL)
+    {
+        OBJ* next = object->next;
+        free_object(object);
+        object = next;
+    }
+}
+
 void free_VM(VM** vm)
 {
+    free_vm_objects(*vm);
    free(*vm);
    vm = NULL;
 }

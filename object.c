@@ -38,6 +38,11 @@ static OBJ* allocate_object(VM* vm, size_t size, OBJ_TYPE type)
    return obj;
 }
 
+void free_object(OBJ* object)
+{
+    free(object);
+}
+
 
 bool object_compare(OBJ* a, OBJ* b)
 {

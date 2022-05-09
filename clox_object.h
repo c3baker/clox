@@ -37,4 +37,5 @@ bool object_compare(OBJ* a, OBJ* b);
 void print_object(OBJ* o);
 OBJ* concatenate_strings(CLOX_STRING* str_1, CLOX_STRING* str_2);
 OBJ* new_string_object(VM* vm, size_t len, char* str_content);
+void free_object(OBJ* object);
 #endif /* CLOX_OBJECT_H_ */
