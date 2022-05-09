@@ -1,7 +1,5 @@
 #include "clox_compiler.h"
 #include "clox_object.h"
-#include <stdlib.h>
-#include <stdio.h>
 
 #ifdef DEBUG_PRINT_CODE
     #include "clox_debug.h"
@@ -9,6 +7,7 @@
 
 #define GET_PARSER(compiler_ptr) ((compiler_ptr)->parser)
 #define GET_SCANNER(compiler_ptr) ((compiler_ptr)->scanner)
+#define GET_VM(compiler_ptr) ((compiler_ptr)->vm)
 #define GET_TYPE(token_ptr) ((token_ptr)->type) 
 
 typedef void (*Parse_fn)(COMPILER* compiler);
@@ -16,7 +15,7 @@ typedef struct
 {
     Parse_fn prefix;
     Parse_fn infix;
-    PRECENDENCE precedence;
+    PRECEDENCE precedence;
 }PARSE_RULE;
 
 static PARSE_RULE* get_rule(TOKEN_TYPE type);
@@ -29,12 +28,13 @@ static void emit_return(COMPILER* compiler);
 static void emit_bytes(COMPILER* compiler, uint8_t byte_1, uint8_t byte_2);
 static void emit_constant(COMPILER* compiler, Value constant_value);
 static void expression(COMPILER* compiler);
-static void prase_precedence(COMPILER* compiler, PRECENDENCE precedence);
+static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence);
 static void number(COMPILER* compiler);
 static void grouping(COMPILER* compiler);
 static void unary(COMPILER* compiler);
 static void binary(COMPILER* compiler);
 static void string(COMPILER* compiler);
+static void literal(COMPILER* compiler);
 
 /* PRATT PARSER TABLE 
  */
@@ -81,7 +81,7 @@ PARSE_RULE rules[] = {
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
 };
 
-static void parse_precedence(COMPILER* compiler, PRECENDENCE precedence)
+static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence)
 {
     PARSER* parser = GET_PARSER(compiler);
     Parse_fn prefix_rule;
@@ -132,7 +132,7 @@ static void string(COMPILER* compiler)
 {
    char* str = GET_PARSER(compiler)->previous.start + 1;  //Skip the leading double-quote
    size_t str_len = GET_PARSER(compiler)->previous.length - 2; // Remove the start and end double-quotes of the string
-   CLOX_STRING* str_obj = NEW_STRING(str_len, str);
+   CLOX_STRING* str_obj = NEW_STRING(GET_VM(compiler), str_len, str);
    emit_constant(compiler, OBJ_VAL(str_obj));
 }
 
@@ -160,7 +160,7 @@ static void binary(COMPILER* compiler)
     TOKEN operator = GET_PARSER(compiler)->previous;
     PARSE_RULE* rule = get_rule(GET_TYPE(&operator));
     printf("Operator %d\n", operator.type);
-    parse_precedence(compiler, (PRECENDENCE)rule->precedence + 1);
+    parse_precedence(compiler, (PRECEDENCE)rule->precedence + 1);
          
     switch(GET_TYPE(&operator))
     {
@@ -269,20 +269,21 @@ static void advance(COMPILER* compiler)
 }
 
 
-static void init_compiler(COMPILER* compiler, SCANNER* scanner, PARSER* parser, const char* source)
+static void init_compiler(COMPILER* compiler, VM* vm, SCANNER* scanner, PARSER* parser, const char* source)
 {
     init_scanner(scanner, source);    
     compiler->parser = parser;
     compiler->scanner = scanner;
+    compiler->vm = vm;
 }
 
-bool compile(const char* source, CHUNK* chunk)
+bool compile(VM* vm, const char* source, CHUNK* chunk)
 {
     SCANNER scanner = {0};
     PARSER parser = {0};
     COMPILER compiler = {0};
 
-    init_compiler(&compiler, &scanner, &parser, source);
+    init_compiler(&compiler, vm, &scanner, &parser, source);
     compiler.compiling_chunk = chunk;
     advance(&compiler);
     expression(&compiler);

@@ -207,9 +207,6 @@ static TOKEN alpha_token(SCANNER* scanner)
 }
 static bool check_keyword(SCANNER* scanner, const char* remaining_keyword, int start, int remaining_len)
 {
-    int cur_indx = 0;
-    char c = peek(scanner);
-
     if((start + remaining_len) == (scanner->current - scanner->start)) // Keyword and token are the same length
     {
         if(0 == memcmp(scanner->start + start, remaining_keyword, remaining_len))

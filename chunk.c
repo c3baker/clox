@@ -1,4 +1,5 @@
 #include "clox_chunk.h"
+#include "clox_memory.h"
 
 static int add_constant(CHUNK* chunk, Value value);
 

@@ -7,6 +7,7 @@
 
 #include "clox_vm.h"
 #include "clox_compiler.h"
+#include "clox_object.h"
 #include <stdarg.h>
 
 static INTERPRET_RESULT run(VM* vm);
@@ -14,6 +15,13 @@ static Value peek(VM* vm, int distance);
 static void runtime_error(VM* vm, const char* format, ...);
 static bool is_falsey(Value value);
 static bool values_equal(Value a, Value b);
+static void string_plus_op(VM* vm);
+static void reset_stack(VM* vm);
+
+static void reset_stack(VM* vm)
+{
+   vm->stack_top = vm->value_stack;
+}
 
 static bool values_equal(Value a, Value b)
 {
@@ -34,7 +42,7 @@ static bool values_equal(Value a, Value b)
         case VAL_NIL:
             return true; // Both are NIL so they are equal
         case VAL_OBJ:
-             return object_compare(AS_OBJ(a), AS_OBJ(b));
+             return object_compare(AS_OBJECT(a), AS_OBJECT(b));
         default:
            return false;
     }
@@ -49,7 +57,7 @@ VM* init_VM(void)
         return NULL;
     }
 
-    vm->stack_top = vm->value_stack;
+    reset_stack(vm);
     vm->ip = NULL;
     vm->objects = NULL;
     
@@ -90,7 +98,7 @@ INTERPRET_RESULT interpret(VM* vm, const char* source)
     INTERPRET_RESULT result = 0;
     init_chunk(&chunk);
 
-    if(!compile(source, &chunk))
+    if(!compile(vm, source, &chunk))
     {
         free_chunk(&chunk);
         return INTERPRET_COMPILE_ERROR;
@@ -118,7 +126,7 @@ static void runtime_error(VM* vm, const char* format, ...)
     size_t instruction = vm->ip - vm->chunk->code - 1;
     int line = get_code_line(vm->chunk, instruction);
     fprintf(stderr, "[Line %d] in script\n", line);
-    reset_stack();
+    reset_stack(vm);
 }
 
 
@@ -145,7 +153,8 @@ static INTERPRET_RESULT run(VM* vm)
 #ifdef CLOX_TRACING_MODE
         print_stack(vm);
 #endif
-        uint8_t instruction = READ_BYTE(vm);        
+        uint8_t instruction = READ_BYTE(vm);
+        Value v = {0};
         switch(instruction)
         {
             case OP_RETURN:
@@ -157,10 +166,10 @@ static INTERPRET_RESULT run(VM* vm)
                 push(vm, READ_LONG_CONSTANT(vm));
                 return INTERPRET_OK;
             case OP_NEGATE:
-                Value v = pop(vm);
+                v = pop(vm);
                 if(!IS_NUMERIC(v))
                 {
-                    runtime_error("Operand must be a number.");
+                    runtime_error(vm, "Operand must be a number.");
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 push(vm, NUMERIC_VAL(-AS_NUMERIC(v)));
@@ -197,9 +206,7 @@ static INTERPRET_RESULT run(VM* vm)
                 push(vm, BOOL_VAL(is_falsey(pop(vm))));
                 return INTERPRET_OK;     
             case OP_EQUAL:
-                Value a = pop(vm);
-                Value b = pop(vm);
-                push(vm, BOOL_VAL(values_equal(a, b)));
+                push(vm, BOOL_VAL(values_equal(pop(vm), pop(vm) )));
                 return INTERPRET_OK;     
             case OP_LESS:
                 NUMERIC_BINARY_OP(vm, BOOL_VAL, <);

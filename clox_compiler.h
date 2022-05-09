@@ -7,9 +7,11 @@
 #include "common.h"
 #include "clox_scanner.h"
 #include "clox_chunk.h"
+#include "clox_vm.h"
 
 typedef struct 
 {
+    VM* vm;
     SCANNER* scanner;
     PARSER* parser;
     CHUNK* compiling_chunk;
@@ -28,10 +30,8 @@ typedef enum
    PREC_UNARY,
    PREC_CALL,
    PREC_PRIMARY // Highest precedence
-}PRECENDENCE;
+}PRECEDENCE;
 
-bool compile(const char* source, CHUNK* chunk);
-
-
+bool compile(VM* vm, const char* source, CHUNK* chunk);
 
 #endif

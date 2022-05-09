@@ -1,9 +1,7 @@
 #ifndef clox_value_h
 #define clox_value_h
 
-#include "common.h"
-#include "clox_object.h"
-
+#include <stdbool.h>
 
 #define BOOL_VAL(value) ((Value){VAL_BOOL, {.boolean = value}})
 #define NIL_VAL()  ((Value){VAL_NIL, {.numeric = 0}})
@@ -17,24 +15,13 @@
 
 #define AS_BOOL(value) ((value).as.boolean)
 #define AS_NUMERIC(value) ((value).as.numeric)
-#define AS_OBJ(value) ((value).as.obj)
+#define AS_OBJECT(value) ((value).as.obj)
 
-#define IS_STRING(value) ((IS_OBJ(value)) && (AS_OBJ(value)->type == OBJ_STRING))
-#define AS_STRING(value) ((CLOX_STRING*)((CLOX_STRING*)AS_OBJ(value)))
-#define C_STRING(value)  ((CLOX_STRING*)AS_OBJ(value))->c_string
+#define IS_STRING(value) ((IS_OBJ(value)) && (AS_OBJECT(value)->type == OBJ_STRING))
+#define AS_STRING(value) ((CLOX_STRING*)((CLOX_STRING*)AS_OBJECT(value)))
+#define C_STRING(value)  ((CLOX_STRING*)AS_OBJECT(value))->c_string
 
 typedef struct obj OBJ;
-
-typedef struct{
-
- VALUE_TYPE type;
- union{
-     bool boolean;
-     double numeric;
-     OBJ* obj;
- }as;   
-}Value;
-
 typedef enum
 {
     VAL_BOOL,
@@ -42,6 +29,16 @@ typedef enum
     VAL_NUMERIC,
     VAL_OBJ
 }VALUE_TYPE;
+
+typedef struct
+{
+ VALUE_TYPE type;
+ union{
+     bool boolean;
+     double numeric;
+     OBJ* obj;
+ }as;   
+}Value;
 
 typedef struct 
 {

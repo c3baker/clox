@@ -9,20 +9,21 @@
 #define CLOX_OBJECT_H_
 
 #include "common.h"
-#include "clox_memory.h"
+#include "clox_value.h"
+#include "clox_vm.h"
 
 typedef enum{
     OBJ_STRING
 }OBJ_TYPE;
-
-#define GET_OBJ_TYPE(o_ptr)  (o_ptr->type)
-#define NEW_STRING(len, c_string) (CLOX_STRING*)new_string_object(len, c_string);
 
 struct obj
 {
    OBJ_TYPE type;
    struct obj* next;
 };
+
+#define GET_OBJ_TYPE(o_ptr)  (o_ptr->type)
+#define NEW_STRING(_vm, len, c_string) (CLOX_STRING*)new_string_object(_vm, len, c_string)
 
 typedef struct string_obj
 {
@@ -35,5 +36,5 @@ typedef struct string_obj
 bool object_compare(OBJ* a, OBJ* b);
 void print_object(OBJ* o);
 OBJ* concatenate_strings(CLOX_STRING* str_1, CLOX_STRING* str_2);
-OBJ* new_string_object(size_t len, char* str_content);
+OBJ* new_string_object(VM* vm, size_t len, char* str_content);
 #endif /* CLOX_OBJECT_H_ */

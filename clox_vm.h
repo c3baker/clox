@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "clox_chunk.h"
+#include "clox_value.h"
 
 #define MAX_STACK_SIZE 512
 
