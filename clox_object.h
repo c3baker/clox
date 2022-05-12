@@ -12,14 +12,17 @@
 #include "clox_value.h"
 #include "clox_vm.h"
 
+typedef unsigned long HASH_VALUE
+
 typedef enum{
     OBJ_STRING
 }OBJ_TYPE;
 
 struct obj
 {
-   OBJ_TYPE type;
    struct obj* next;
+   HASH_VALUE hash;
+   OBJ_TYPE type;
 };
 
 #define GET_OBJ_TYPE(o_ptr)  (o_ptr->type)
