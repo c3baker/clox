@@ -61,6 +61,7 @@ VM* init_VM(void)
     reset_stack(vm);
     vm->ip = NULL;
     vm->objects = NULL;
+    init_hash_table(&vm->strings);
     
     return vm;
 }
@@ -79,7 +80,8 @@ static void free_vm_objects(VM* vm)
 
 void free_VM(VM** vm)
 {
-    free_vm_objects(*vm);
+   free_vm_objects(*vm);
+   free_hash_table(&(*vm)->strings);
    free(*vm);
    vm = NULL;
 }

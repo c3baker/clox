@@ -16,14 +16,32 @@
          }while(0);
 
 static OBJ* allocate_object(VM* vm, size_t size, OBJ_TYPE type);
+static HASH_VALUE hash(const OBJ* key);
 
+static HASH_VALUE hash(const OBJ* key)
+{
+  uint32_t hash = 2166136261u;
 
+  if(key->type == OBJ_STRING) // Only support string hashes now
+  {
+      int i = 0;
+      CLOX_STRING* str_obj = OBJ_AS_STRING(key);
+
+      for (i = 0; i < str_obj->len; i++) {
+        hash ^= (uint8_t)str_obj->c_string[i];
+        hash *= 16777619;
+      }
+  }
+
+  return hash;
+}
 
 OBJ* new_string_object(VM* vm, size_t len, char* str_content)
 {
     OBJ* str_obj =  allocate_object(vm, CLOX_STRING_SIZE(len), OBJ_STRING);
     CLOX_STRING* clox_string = OBJ_AS_STRING(str_obj);
 
+    str_obj->hash = hash(str_obj);
     clox_string->len = len;
     memcpy(clox_string->c_string, str_content, len);
     clox_string->c_string[len] = NULL_TERMINATOR;
@@ -34,6 +52,7 @@ static OBJ* allocate_object(VM* vm, size_t size, OBJ_TYPE type)
 {
    OBJ* obj = reallocate(NULL, 0, size);
    obj->type = type;
+   obj->hash = 0;
    INSERT_OBJECT(vm, obj);
    return obj;
 }

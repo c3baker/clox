@@ -12,9 +12,11 @@
 #include "clox_value.h"
 #include "clox_vm.h"
 
-typedef unsigned long HASH_VALUE
+typedef unsigned int HASH_VALUE;
 
-typedef enum{
+
+typedef enum
+{
     OBJ_STRING
 }OBJ_TYPE;
 
