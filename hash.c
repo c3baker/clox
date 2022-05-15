@@ -8,7 +8,7 @@
 
 #include "clox_hash.h"
 #include "clox_memory.h"
-
+#include "clox_value.h"
 
 #define SET_NULL_ENTRY(entry)do{ \
    entry.key = NULL; \
@@ -16,7 +16,6 @@
    entry.deleted = false; \
 }while(0)
 
-#define IS_NULL_ENTRY(entry) (entry.key == NULL)
 #define KEY_MATCH(entry, key)(entry.key == key)
 #define HASH_TABLE_OVERLOADED(h_table_ptr) ((((float)h_table_ptr->count) / ((float)h_table_ptr->capacity)) > MAX_LOAD)
 #define IS_TOMBSTONE(entry) (entry.deleted)
@@ -121,7 +120,7 @@ void insert_entry(HASH_TABLE* h_table, const OBJ* key, Value value)
 
     entry = find_entry(h_table, key);
 
-    if(IS_NULL_ENTRY((*entry)) || IS_TOMBSTONE((*entry)))
+    if(IS_NULL_ENTRY((*entry)))
     {
         // Insert a new key, value pair
         entry->key = key;
@@ -151,6 +150,39 @@ void delete_entry(HASH_TABLE* h_table, const OBJ* key)
 
     if(IS_NULL_ENTRY((*entry)) || IS_TOMBSTONE((*entry))) return;
     MAKE_TOMBSTONE((*entry));
+}
+
+ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t len, HASH_VALUE hash)
+{
+    size_t table_size = h_table->capacity;
+    size_t index = hash & table_size;
+    ENTRY* last_tombstone = NULL;
+
+    for(;;)
+    {
+        ENTRY e = h_table->table[index];
+        if(IS_NULL_ENTRY(e))
+        {
+            if(IS_TOMBSTONE(e))
+            {
+                last_tombstone = &e;
+            }
+            else
+            {
+               return last_tombstone == NULL ? &e : last_tombstone;
+            }
+        }
+        else
+        {
+            if((AS_STRING(e.value)->len == len) &&
+               (0 == memcmp(AS_STRING(e.value)->c_string, chars, len)))
+            {
+                return &e;
+            }
+        }
+
+        index = (index + 1) % table_size;
+    }
 }
 
 

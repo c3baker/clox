@@ -7,6 +7,7 @@
 
 #include "clox_object.h"
 #include "clox_memory.h"
+#include "clox_hash.h"
 
 #define OBJ_AS_STRING(o_ptr) ((CLOX_STRING*)o_ptr)
 #define CLOX_STRING_SIZE(len) sizeof(CLOX_STRING) + ((len + 1) *sizeof(char))  // +1 so there is space to add a null terminator
@@ -14,10 +15,27 @@
                obj_ptr->next = _vm->objects;\
               _vm->objects = obj_ptr;       \
          }while(0);
+#define REMOVE_OBJECT(_vm, obj_ptr) remove_object_from_list(_vm, obj_ptr)
 
 static OBJ* allocate_object(VM* vm, size_t size, OBJ_TYPE type);
 static HASH_VALUE hash(const OBJ* key);
 
+static void remove_object_from_list(VM* vm, OBJ* object)
+{
+     OBJ* temp = vm->objects;  
+     if(temp == object) 
+     {                   
+         vm->objects = object->next; 
+         return;                       
+     }                              
+     while(temp->next != object )
+     {
+         if(temp->next == NULL) return;
+         temp = temp->next;
+     }
+
+     temp->next = object->next;
+}
 static HASH_VALUE hash(const OBJ* key)
 {
   uint32_t hash = 2166136261u;
@@ -40,11 +58,22 @@ OBJ* new_string_object(VM* vm, size_t len, char* str_content)
 {
     OBJ* str_obj =  allocate_object(vm, CLOX_STRING_SIZE(len), OBJ_STRING);
     CLOX_STRING* clox_string = OBJ_AS_STRING(str_obj);
+    ENTRY* str_table_entry = NULL;
 
     str_obj->hash = hash(str_obj);
     clox_string->len = len;
+    str_table_entry = table_find_string_entry(&vm->strings, str_content, len, str_obj->hash);
+
+    if(!IS_NULL_ENTRY((*str_table_entry)))
+    {        
+        free_object(vm, str_obj);
+        return str_table_entry->key; // Use string object from string internment table
+    }
+
     memcpy(clox_string->c_string, str_content, len);
     clox_string->c_string[len] = NULL_TERMINATOR;
+    str_table_entry->key = str_obj;
+    str_table_entry->value = OBJ_VAL(clox_string);
     return str_obj;
 }
 
@@ -57,8 +86,16 @@ static OBJ* allocate_object(VM* vm, size_t size, OBJ_TYPE type)
    return obj;
 }
 
-void free_object(OBJ* object)
+void free_object(VM* vm, OBJ* object)
 {
+    switch(object->type)
+    {
+        case OBJ_STRING:
+            FREE_ARRAY(OBJ_AS_STRING(object)->c_string);
+        default:
+            break;
+    }
+    REMOVE_OBJECT(vm, object);
     free(object);
 }
 

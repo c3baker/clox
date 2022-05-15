@@ -1,8 +1,8 @@
 #ifndef clox_chunk_h
 #define clox_chunk_h
 
-#include "common.h"
 #include "clox_value.h"
+#include "common.h"
 
 #define LINE_INIT 1
 #define MAX_SHORT_CONST_INDEX UINT8_MAX
@@ -20,9 +20,9 @@ typedef enum{
     OP_FALSE,
     OP_NIL,
     OP_NOT,
-    OP_LESS,
+    OP_EQUAL,
     OP_GREATER,
-    OP_EQUAL
+    OP_LESS
 }OP_CODE;
 
 typedef struct{
