@@ -13,7 +13,8 @@
 
 #define HASH_TABLE_INIT_CAP 100
 #define MAX_LOAD 0.65
-#define IS_NULL_ENTRY(entry) (IS_NIL(entry.value))
+#define IS_NULL_ENTRY(entry) (NULL == entry.key)
+#define IS_NILL_ENTRY(entry) (IS_NIL(entry.value))
 
 typedef struct hash_entry
 {
@@ -32,6 +33,7 @@ typedef struct hash_table
 void init_hash_table(HASH_TABLE* h_table);
 void free_hash_table(HASH_TABLE* h_table);
 void delete_entry(HASH_TABLE* h_table, const OBJ* key);
-void insert_entry(HASH_TABLE* h_table, const OBJ* key, Value value);
+void table_insert(HASH_TABLE* h_table, const OBJ* key, Value value);
+bool table_get(HASH_TABLE* h_table, const OBJ* key, Value* value);
 ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t len, HASH_VALUE hash);
 #endif /* CLOX_HASH_H_ */

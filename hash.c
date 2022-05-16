@@ -20,7 +20,6 @@
 #define HASH_TABLE_OVERLOADED(h_table_ptr) ((((float)h_table_ptr->count) / ((float)h_table_ptr->capacity)) > MAX_LOAD)
 #define IS_TOMBSTONE(entry) (entry.deleted)
 #define MAKE_TOMBSTONE(entry) do{ \
-    entry.key = NULL; \
     entry.value = NIL_VAL(); \
     entry.deleted = true; \
     }while(0)
@@ -54,7 +53,7 @@ static void expand_hash_table(HASH_TABLE* h_table)
             // Re-insert the entry since its index may have changed
             ENTRY e = old_table[i];
             SET_NULL_ENTRY(new_table[i]);
-            insert_entry(h_table, e.key, e.value);
+            table_insert(h_table, e.key, e.value);
         }
     }
 
@@ -110,7 +109,19 @@ static ENTRY* find_entry(HASH_TABLE* h_table, OBJ* key)
     return first_tombstone == NULL ? &h_table->table[h_index] : first_tombstone;
 }
 
-void insert_entry(HASH_TABLE* h_table, const OBJ* key, Value value)
+bool table_get(HASH_TABLE* h_table, const OBJ* key, Value* value)
+{
+   ENTRY* e = find_entry(h_table, key);
+   if(IS_NULL_ENTRY((*e)))
+   {
+       return false;
+   }
+   *value = e->value;
+   return true;
+}
+
+
+void table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
 {
     HASH_VALUE h_index = 0;
     ENTRY* entry = NULL;
@@ -120,7 +131,7 @@ void insert_entry(HASH_TABLE* h_table, const OBJ* key, Value value)
 
     entry = find_entry(h_table, key);
 
-    if(IS_NULL_ENTRY((*entry)))
+    if(IS_NILL_ENTRY((*entry)))
     {
         // Insert a new key, value pair
         entry->key = key;
@@ -148,7 +159,7 @@ void delete_entry(HASH_TABLE* h_table, const OBJ* key)
 
     entry = find_entry(h_table, key);
 
-    if(IS_NULL_ENTRY((*entry)) || IS_TOMBSTONE((*entry))) return;
+    if(IS_NILL_ENTRY((*entry))) return;
     MAKE_TOMBSTONE((*entry));
 }
 
@@ -161,7 +172,7 @@ ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t le
     for(;;)
     {
         ENTRY e = h_table->table[index];
-        if(IS_NULL_ENTRY(e))
+        if(IS_NILL_ENTRY(e))
         {
             if(IS_TOMBSTONE(e))
             {
@@ -175,10 +186,11 @@ ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t le
         else
         {
             if((AS_STRING(e.value)->len == len) &&
+               (e.key->hash == hash) &&
                (0 == memcmp(AS_STRING(e.value)->c_string, chars, len)))
-            {
-                return &e;
-            }
+               {
+                   return &e;
+               }
         }
 
         index = (index + 1) % table_size;
