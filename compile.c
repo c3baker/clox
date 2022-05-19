@@ -35,6 +35,14 @@ static void unary(COMPILER* compiler);
 static void binary(COMPILER* compiler);
 static void string(COMPILER* compiler);
 static void literal(COMPILER* compiler);
+static bool check(COMPILER* compiler, TOKEN_TYPE type);
+static bool match(COMPILER* compiler, TOKEN_TYPE type);
+static void declaration(COMPILER* compiler);
+static void statement(COMPILER* compiler);
+static void expression_statement(COMPILER* compiler);
+static void synchronize(COMPILER* compiler);
+static void var_declaration(COMPILER* compiler);
+
 
 /* PRATT PARSER TABLE 
  */
@@ -86,7 +94,6 @@ static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence)
     PARSER* parser = GET_PARSER(compiler);
     Parse_fn prefix_rule;
     advance(compiler);
-    printf("Prefix Token %d\n", GET_TYPE(&parser->previous));
     prefix_rule = get_rule(GET_TYPE(&parser->previous))->prefix;
     if(prefix_rule == NULL)
     {
@@ -114,6 +121,108 @@ static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence)
 static PARSE_RULE* get_rule(TOKEN_TYPE type)
 {
     return &rules[type];
+}
+
+static void synchronize(COMPILER* compiler)
+{
+    PARSER* parser = GET_PARSER(compiler);
+
+    parser->panic_mode = false;
+
+    while(parser->current.type != TOKEN_EOF)
+    {
+        if(parser->current.type == TOKEN_SEMICOLON) return; // We can synchronize at the end of the statement
+
+        switch(parser->current.type)
+        {
+            case TOKEN_CLASS:
+            case TOKEN_FUN:
+            case TOKEN_VAR:
+            case TOKEN_FOR:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_PRINT:
+            case TOKEN_RETURN:
+                return;
+            default:
+                ; // Do nothing
+        }
+        advance(compiler);
+    }
+}
+
+static void declaration(COMPILER* compiler)
+{
+    statement(compiler);
+
+    if(GET_PARSER(compiler)->panic_mode)
+    {
+        // Synchronize the compiler
+        synchronize(GET_PARSER(compiler));
+    }
+}
+
+static void statement(COMPILER* compiler)
+{
+   if(match(compiler, TOKEN_PRINT))
+   {
+       print_statement(compiler);
+
+   }
+   else if(match(compiler, TOKEN_VAR))
+   {
+       var_declaration(compiler);
+   }
+   else
+   {
+       expression_statement(compiler);
+   }
+}
+
+uint8_t parse_variable(COMPILER* compiler, char* message)
+{
+    PARSER* parser = GET_PARSER(compiler);
+
+    if(match(compiler, TOKEN_IDENTIFIER))
+    {
+
+    }
+    else
+    {
+        error_at(parser, &parser->current, message);
+    }
+
+}
+
+
+static void expression_statement(COMPILER* compiler)
+{
+    expression();
+    consume(compiler, TOKEN_SEMICOLON, "expected ; at end of statement");
+    emit_byte(compiler, OP_POP);
+}
+
+static void print_statement(COMPILER* compiler)
+{
+    expression();
+    consume(compiler, TOKEN_SEMICOLON, "expected ; at end of statement");
+    emit_byte(compiler, OP_PRINT);
+}
+
+static void var_declaration(COMPILER* compiler)
+{
+    uint8_t global = parse_variable(compiler, "Expected variable name");
+
+    if(match(TOKEN_EQUAL))
+    {
+        // There's an assignment
+    }
+    else
+    {
+        emit_byte(OP_NIL);
+    }
+    consume(compiler, TOKEN_SEMICOLON, "Expected ; at end of statement");
+    define_variable(global);
 }
 
 static void expression(COMPILER* compiler)
@@ -221,6 +330,18 @@ static void literal(COMPILER* compiler)
     };
 }
 
+static bool check(COMPILER* compiler, TOKEN_TYPE type)
+{
+   return GET_PARSER(compiler)->current.type == type;
+}
+
+static bool match(COMPILER* compiler, TOKEN_TYPE type)
+{
+   if(!check(compiler, type)) return false;
+   advance(compiler);
+   return true;
+}
+
 static void consume(COMPILER* compiler, TOKEN_TYPE type, const char* message)
 {
     if(GET_PARSER(compiler)->current.type == type)
@@ -258,14 +379,16 @@ static void error(PARSER* parser, const char* message)
 
 static void advance(COMPILER* compiler)
 {
+    PARSER* parser = GET_PARSER(compiler);
+    SCANNER* scanner = GET_SCANNER(compiler);
 
-    GET_PARSER(compiler)->previous = GET_PARSER(compiler)->current;
+    parser->previous = parser->current;
 
     while(true)
     {
-        GET_PARSER(compiler)->current = scan_token(GET_SCANNER(compiler));
-        if(GET_PARSER(compiler)->current.type != TOKEN_ERROR) break;
-        error_at(GET_PARSER(compiler), &GET_PARSER(compiler)->current, GET_PARSER(compiler)->current.start);
+        parser->current = scan_token(scanner);
+        if(parser->current.type != TOKEN_ERROR) break;
+        error_at(parser, &parser->current, parser->current.start);
     }
 }
 
@@ -287,8 +410,10 @@ bool compile(VM* vm, const char* source, CHUNK* chunk)
     init_compiler(&compiler, vm, &scanner, &parser, source);
     compiler.compiling_chunk = chunk;
     advance(&compiler);
-    expression(&compiler);
-    consume(&compiler, TOKEN_EOF, "Expected end of expression.");
+    while(!match(&compiler, TOKEN_EOF))
+    {
+        declaration(&compiler);
+    }
     emit_return(&compiler);
     #ifdef DEBUG_PRINT_CODE
        if (!parser.had_error)

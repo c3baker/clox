@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS= -g -Wall
 
-SRCS=clox_main.c scanner.c values.c vm.c clox_memory.c compile.c chunk.c debug.c
+SRCS=clox_main.c scanner.c values.c vm.c memory.c compile.c chunk.c debug.c object.c
 OBJS=$(SRCS:.c=.o)
 MAIN=clox
 

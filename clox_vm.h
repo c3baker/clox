@@ -22,6 +22,7 @@ typedef struct
    Value* stack_top;
    OBJ* objects;
    HASH_TABLE strings;
+   HASH_TABLE globals;
    Value value_stack[MAX_STACK_SIZE];
 }VM;
 

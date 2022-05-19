@@ -21,7 +21,6 @@ int get_line_number(const CHUNK* chunk, int offset)
         {
             return chunk->lines.start_line + i;
         }
-
     }
 
     return chunk->lines.start_line;
@@ -140,6 +139,10 @@ int disassemble_instruction(const CHUNK* chunk, int offset)
             return simple_instruction("OP_GREATER", offset);
         case OP_LESS:
             return simple_instruction("OP_LESS", offset);
+        case OP_PRINT:
+            return simple_instruction("OP_PRINT", offset);
+        case OP_POP:
+            return simple_instruction("OP_POP", offset);
  
 
         default:

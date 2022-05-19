@@ -62,6 +62,7 @@ VM* init_VM(void)
     vm->ip = NULL;
     vm->objects = NULL;
     init_hash_table(&vm->strings);
+    init_hash_table(&vm->globals);
     
     return vm;
 }
@@ -82,6 +83,7 @@ void free_VM(VM** vm)
 {
    free_vm_objects(*vm);
    free_hash_table(&(*vm)->strings);
+   free_hash_table(&(*vm)->globals);
    free(*vm);
    vm = NULL;
 }
@@ -229,6 +231,14 @@ static INTERPRET_RESULT run(VM* vm)
                 return INTERPRET_OK;     
             case OP_GREATER:
                 NUMERIC_BINARY_OP(vm, BOOL_VAL, >);
+                return INTERPRET_OK;
+            case OP_PRINT:
+                v = pop(vm);
+                print_value(v);
+                printf("\n");
+                return INTERPRET_OK;
+            case OP_POP:
+                pop(vm);
                 return INTERPRET_OK;
             default:
                 printf("UNKNOWN OP CODE\n");
