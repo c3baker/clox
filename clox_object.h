@@ -43,4 +43,5 @@ void print_object(OBJ* o);
 OBJ* concatenate_strings(CLOX_STRING* str_1, CLOX_STRING* str_2);
 OBJ* new_string_object(VM* vm, size_t len, char* str_content);
 void free_object(OBJ* object);
+OBJ* string_copy(VM* vm, char* str_start, size_t len);
 #endif /* CLOX_OBJECT_H_ */

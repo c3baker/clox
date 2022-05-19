@@ -54,7 +54,8 @@ static HASH_VALUE hash(const OBJ* key)
   return hash;
 }
 
-OBJ* new_string_object(VM* vm, size_t len, char* str_content)
+
+OBJ* string_copy(VM* vm, char* str_start, size_t len)
 {
     OBJ* str_obj =  allocate_object(vm, CLOX_STRING_SIZE(len), OBJ_STRING);
     CLOX_STRING* clox_string = OBJ_AS_STRING(str_obj);
@@ -62,7 +63,16 @@ OBJ* new_string_object(VM* vm, size_t len, char* str_content)
 
     str_obj->hash = hash(str_obj);
     clox_string->len = len;
-    str_table_entry = table_find_string_entry(&vm->strings, str_content, len, str_obj->hash);
+    memcpy(clox_string->c_string, str_start, len);
+    clox_string->c_string[len] = NULL_TERMINATOR;    
+
+    return str_obj;
+}
+
+OBJ* new_string_object(VM* vm, size_t len, char* str_content)
+{
+    OBJ* str_obj =  string_copy(vm, str_content, len);
+    ENTRY* str_table_entry = table_find_string_entry(&vm->strings, str_content, len, str_obj->hash);
 
     if(!IS_NULL_ENTRY((*str_table_entry)))
     {        
@@ -70,10 +80,9 @@ OBJ* new_string_object(VM* vm, size_t len, char* str_content)
         return str_table_entry->key; // Use string object from string internment table
     }
 
-    memcpy(clox_string->c_string, str_content, len);
-    clox_string->c_string[len] = NULL_TERMINATOR;
     str_table_entry->key = str_obj;
-    str_table_entry->value = OBJ_VAL(clox_string);
+    str_table_entry->value = OBJ_VAL(OBJ_AS_STRING(str_obj));
+
     return str_obj;
 }
 

@@ -179,32 +179,30 @@ static void statement(COMPILER* compiler)
    }
 }
 
-uint8_t parse_variable(COMPILER* compiler, char* message)
+int parse_variable(COMPILER* compiler, char* message)
 {
     PARSER* parser = GET_PARSER(compiler);
+    TOKEN ident_token = {0};
 
-    if(match(compiler, TOKEN_IDENTIFIER))
-    {
+    consume(compiler, TOKEN_IDENTIFIER, message);
 
-    }
-    else
-    {
-        error_at(parser, &parser->current, message);
-    }
+    ident_token = parser->previous;
 
+    return add_constant(OBJ_VAL(string_copy(GET_VM(compiler), ident_token.start, 
+                        ident_token.length)));
 }
 
 
 static void expression_statement(COMPILER* compiler)
 {
-    expression();
+    expression(compiler);
     consume(compiler, TOKEN_SEMICOLON, "expected ; at end of statement");
     emit_byte(compiler, OP_POP);
 }
 
 static void print_statement(COMPILER* compiler)
 {
-    expression();
+    expression(compiler);
     consume(compiler, TOKEN_SEMICOLON, "expected ; at end of statement");
     emit_byte(compiler, OP_PRINT);
 }
@@ -213,13 +211,13 @@ static void var_declaration(COMPILER* compiler)
 {
     uint8_t global = parse_variable(compiler, "Expected variable name");
 
-    if(match(TOKEN_EQUAL))
+    if(match(compiler, TOKEN_EQUAL))
     {
         // There's an assignment
     }
     else
     {
-        emit_byte(OP_NIL);
+        emit_byte(compiler, OP_NIL);
     }
     consume(compiler, TOKEN_SEMICOLON, "Expected ; at end of statement");
     define_variable(global);
