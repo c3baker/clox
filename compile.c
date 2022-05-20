@@ -31,6 +31,7 @@ static void expression(COMPILER* compiler);
 static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence);
 static void number(COMPILER* compiler);
 static void grouping(COMPILER* compiler);
+static void variable(COMPILER* compiler);
 static void unary(COMPILER* compiler);
 static void binary(COMPILER* compiler);
 static void string(COMPILER* compiler);
@@ -42,7 +43,11 @@ static void statement(COMPILER* compiler);
 static void expression_statement(COMPILER* compiler);
 static void synchronize(COMPILER* compiler);
 static void var_declaration(COMPILER* compiler);
-
+static void define_variable(COMPILER* compiler, int value_index);
+static int parse_variable(COMPILER* compiler, char* message);
+static int identifier_constant(COMPILER* compiler, TOKEN* ident_token);
+static void emit_long_constant(COMPILER* compiler, int value_index);
+static void named_variable(COMPILER* compiler, TOKEN* identifier);
 
 /* PRATT PARSER TABLE 
  */
@@ -66,7 +71,7 @@ PARSE_RULE rules[] = {
     [TOKEN_GREATER_EQUAL] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_COMPARISON},
-    [TOKEN_IDENTIFIER] = {NULL, NULL, PREC_PRIMARY},
+    [TOKEN_IDENTIFIER] = {variable, NULL, PREC_PRIMARY},
     [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMERIC] = {number, NULL, PREC_NONE},
     [TOKEN_AND] = {NULL, NULL, PREC_NONE},
@@ -179,7 +184,13 @@ static void statement(COMPILER* compiler)
    }
 }
 
-int parse_variable(COMPILER* compiler, char* message)
+static int identifier_constant(COMPILER* compiler, TOKEN* ident_token)
+{
+    return add_constant(OBJ_VAL(new_string_object(GET_VM(compiler),ident_token->length,
+                                    ident_token->start)));
+}
+
+static int parse_variable(COMPILER* compiler, char* message)
 {
     PARSER* parser = GET_PARSER(compiler);
     TOKEN ident_token = {0};
@@ -188,10 +199,30 @@ int parse_variable(COMPILER* compiler, char* message)
 
     ident_token = parser->previous;
 
-    return add_constant(OBJ_VAL(string_copy(GET_VM(compiler), ident_token.start, 
-                        ident_token.length)));
+    return identifier_constant(compiler, &ident_token);
 }
 
+static void emit_long_constant(COMPILER* compiler, int value_index)
+{
+    emit_bytes(compiler, (uint8_t)(value_index & MAX_SHORT_CONST_INDEX));
+    emit_bytes(compiler, (uint8_t)((value_index >> 8) & MAX_SHORT_CONST_INDEX));
+    emit_bytes(compiler, (uint8_t)((value_index >> 16) & MAX_SHORT_CONST_INDEX));
+}
+
+static void define_variable(COMPILER* compiler, int value_index)
+{
+    if(value_index > MAX_SHORT_CONST_INDEX)
+    {
+        // Little Endian byte storage
+        emit_bytes(compiler, OP_DEFINE_GLOBAL_LONG);
+        emit_long_constant(compiler, value_index);
+    }
+    else
+    {
+        emit_bytes(compiler, OP_DEFINE_GLOBAL);
+        emit_bytes(compiler, (uint8_t)value_index);
+    }
+}
 
 static void expression_statement(COMPILER* compiler)
 {
@@ -209,7 +240,7 @@ static void print_statement(COMPILER* compiler)
 
 static void var_declaration(COMPILER* compiler)
 {
-    uint8_t global = parse_variable(compiler, "Expected variable name");
+    int global = parse_variable(compiler, "Expected variable name");
 
     if(match(compiler, TOKEN_EQUAL))
     {
@@ -220,7 +251,7 @@ static void var_declaration(COMPILER* compiler)
         emit_byte(compiler, OP_NIL);
     }
     consume(compiler, TOKEN_SEMICOLON, "Expected ; at end of statement");
-    define_variable(global);
+    define_variable(compiler, global);
 }
 
 static void expression(COMPILER* compiler)
@@ -240,7 +271,6 @@ static void string(COMPILER* compiler)
    char* str = GET_PARSER(compiler)->previous.start + 1;  //Skip the leading double-quote
    size_t str_len = GET_PARSER(compiler)->previous.length - 2; // Remove the start and end double-quotes of the string
    CLOX_STRING* str_obj = NEW_STRING(GET_VM(compiler), str_len, str);
-   printf("String\n");
    emit_constant(compiler, OBJ_VAL(str_obj));
 }
 
@@ -260,6 +290,29 @@ static void unary(COMPILER* compiler)
     {
         emit_byte(compiler, OP_NEGATE); //Negation will pop the stack, negate and push on the stack again
     }
+}
+
+static void variable(COMPILER* compiler)
+{
+    PARSER* parser = GET_PARSER(compiler);
+
+    named_variable(compiler, &parser->previous);
+}
+
+static void named_variable(COMPILER* compiler, TOKEN* identifier)
+{
+    int index = identifier_constant(compiler, identifier);
+
+    if(index > MAX_SHORT_CONST_INDEX)
+    {
+        emit_byte(compiler, OP_GET_GLOBAL_LONG);
+        emit_long_constant(compiler, index);
+    }
+    else
+    {
+        emit_byte(compiler, OP_GET_GLOBAL);
+        emit_byte(compiler, (uint8_t)index);
+    }
 
 }
 
@@ -267,9 +320,8 @@ static void binary(COMPILER* compiler)
 {
     TOKEN operator = GET_PARSER(compiler)->previous;
     PARSE_RULE* rule = get_rule(GET_TYPE(&operator));
-    printf("Operator %d\n", operator.type);
+
     parse_precedence(compiler, (PRECEDENCE)rule->precedence + 1);
-         
     switch(GET_TYPE(&operator))
     {
         case TOKEN_PLUS:

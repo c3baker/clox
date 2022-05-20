@@ -153,6 +153,8 @@ static INTERPRET_RESULT run(VM* vm)
 #define READ_BYTE(_vm) (*_vm->ip++)
 #define READ_CONSTANT(_vm) (_vm->chunk->constants.values[READ_BYTE(_vm)])
 #define READ_LONG_CONSTANT(_vm) (_vm->chunk->constants.values[(READ_BYTE(_vm) | READ_BYTE(_vm)<<8 | READ_BYTE(_vm)<<16)])
+#define READ_OBJECT(_vm) (AS_OBJECT(READ_CONSTANT(_vm)))
+#define READ_OBJECT_LONG(_vm) (AS_OBJECT(READ_LONG_CONSTANT(_vm)))
 #define NUMERIC_BINARY_OP(_vm, VALUE_TYPE, op) \
         do{ \
            if(!IS_NUMERIC(peek(_vm, 0)) || !IS_NUMERIC(peek(_vm, 1))) \
@@ -173,6 +175,7 @@ static INTERPRET_RESULT run(VM* vm)
 #endif
         uint8_t instruction = READ_BYTE(vm);
         Value v = {0};
+        OBJ* o = NULL;
         switch(instruction)
         {
             case OP_RETURN:
@@ -240,6 +243,34 @@ static INTERPRET_RESULT run(VM* vm)
             case OP_POP:
                 pop(vm);
                 return INTERPRET_OK;
+            case OP_DEFINE_GLOBAL:
+                o = READ_OBJECT(vm);
+                table_insert(vm->globals, o, peek(vm, 0));
+                pop(vm); //Pop AFTER adding to table due to garbage collection
+                return INTERPRET_OK;
+            case OP_DEFINE_GLOBAL_LONG:
+                o = READ_OBJECT_LONG(vm);
+                table_insert(vm->globals, o, peek(vm, 0));
+                pop(vm);
+                return INTERPRET_OK;
+            case OP_GET_GLOBAL:
+                o = READ_OBJECT(vm);
+                if(!table_get(vm->globals, o, &v))
+                {
+                    runtime_error(vm, "Undefined global variable %s\n", OBJ_TO_STRING(o));
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                push(vm, v);
+                return INTERPRET_OK;
+            case OP_GET_GLOBAL_LONG:
+                o = READ_OBJECT_LONG(vm);
+                if(!table_get(vm->globals, o, &v))
+                {
+                    runtime_error(vm, "Undefined global variable %s\n", OBJ_TO_STRING(o));
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                push(vm, v);
+                return INTERPRET_OK;
             default:
                 printf("UNKNOWN OP CODE\n");
                 break;
@@ -250,6 +281,8 @@ static INTERPRET_RESULT run(VM* vm)
 #undef READ_LONG_CONSTANT
 #undef READ_CONSTANT
 #undef READ_BYTE
+#undef READ_OBJECT
+#undef READ_OBJECT_LONG
 }
 
 static Value peek(VM* vm, int distance)

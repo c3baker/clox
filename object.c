@@ -18,7 +18,8 @@
 #define REMOVE_OBJECT(_vm, obj_ptr) remove_object_from_list(_vm, obj_ptr)
 
 static OBJ* allocate_object(VM* vm, size_t size, OBJ_TYPE type);
-static HASH_VALUE hash(const OBJ* key);
+static HASH_VALUE hash_char_string(char* c_string, size_t len);
+static OBJ* string_copy(VM* vm, char* str_start, size_t len);
 
 static void remove_object_from_list(VM* vm, OBJ* object)
 {
@@ -36,32 +37,28 @@ static void remove_object_from_list(VM* vm, OBJ* object)
 
      temp->next = object->next;
 }
-static HASH_VALUE hash(const OBJ* key)
+
+static HASH_VALUE hash_char_string(char* c_string, size_t len)
 {
   uint32_t hash = 2166136261u;
 
-  if(key->type == OBJ_STRING) // Only support string hashes now
-  {
-      int i = 0;
-      CLOX_STRING* str_obj = OBJ_AS_STRING(key);
+  int i = 0;
 
-      for (i = 0; i < str_obj->len; i++) {
-        hash ^= (uint8_t)str_obj->c_string[i];
-        hash *= 16777619;
-      }
+  for (i = 0; i < len; i++)
+  {
+      hash ^= (uint8_t)c_string[i];
+      hash *= 16777619;
   }
 
   return hash;
 }
 
 
-OBJ* string_copy(VM* vm, char* str_start, size_t len)
+static OBJ* string_copy(VM* vm, char* str_start, size_t len)
 {
     OBJ* str_obj =  allocate_object(vm, CLOX_STRING_SIZE(len), OBJ_STRING);
     CLOX_STRING* clox_string = OBJ_AS_STRING(str_obj);
-    ENTRY* str_table_entry = NULL;
 
-    str_obj->hash = hash(str_obj);
     clox_string->len = len;
     memcpy(clox_string->c_string, str_start, len);
     clox_string->c_string[len] = NULL_TERMINATOR;    
@@ -71,17 +68,20 @@ OBJ* string_copy(VM* vm, char* str_start, size_t len)
 
 OBJ* new_string_object(VM* vm, size_t len, char* str_content)
 {
-    OBJ* str_obj =  string_copy(vm, str_content, len);
-    ENTRY* str_table_entry = table_find_string_entry(&vm->strings, str_content, len, str_obj->hash);
+    OBJ* str_obj = NULL;
+    HASH_VALUE hash = hash_char_string(str_content, len);
+    ENTRY* str_table_entry = table_find_string_entry(&vm->strings, str_content, len, hash);
 
+    // String already interned, use pointer to the previously created string object
+    // Instead of creating a new string object
     if(!IS_NULL_ENTRY((*str_table_entry)))
     {        
-        free_object(vm, str_obj);
         return str_table_entry->key; // Use string object from string internment table
     }
 
-    str_table_entry->key = str_obj;
-    str_table_entry->value = OBJ_VAL(OBJ_AS_STRING(str_obj));
+    str_obj = string_copy(vm, str_content, len);
+    str_obj->hash = hash;
+    SET_ENTRY((*str_table_entry), str_obj, NIL_VAL());
 
     return str_obj;
 }
@@ -101,6 +101,7 @@ void free_object(VM* vm, OBJ* object)
     {
         case OBJ_STRING:
             FREE_ARRAY(OBJ_AS_STRING(object)->c_string);
+            break;
         default:
             break;
     }

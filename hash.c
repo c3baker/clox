@@ -149,18 +149,22 @@ void table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
 }
 
 
-void delete_entry(HASH_TABLE* h_table, const OBJ* key)
+OBJ* delete_entry(HASH_TABLE* h_table, const OBJ* key)
 {
     HASH_VALUE h_index = 0;
     ENTRY* entry = NULL;
 
     if(key == NULL)
-        return;
+        return NULL;
 
     entry = find_entry(h_table, key);
 
-    if(IS_NILL_ENTRY((*entry))) return;
-    MAKE_TOMBSTONE((*entry));
+    if(!IS_NULL_ENTRY((*entry)))
+    {
+        MAKE_TOMBSTONE((*entry));
+    }
+
+    return entry->key;  // So key object can be freed externally since key object was created externally
 }
 
 ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t len, HASH_VALUE hash)
@@ -172,7 +176,7 @@ ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t le
     for(;;)
     {
         ENTRY e = h_table->table[index];
-        if(IS_NILL_ENTRY(e))
+        if(IS_NULL_ENTRY(e))
         {
             if(IS_TOMBSTONE(e))
             {
@@ -180,7 +184,7 @@ ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t le
             }
             else
             {
-               return last_tombstone == NULL ? &e : last_tombstone;
+               return (last_tombstone == NULL) ? &e : last_tombstone;
             }
         }
         else
@@ -195,6 +199,8 @@ ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t le
 
         index = (index + 1) % table_size;
     }
+
+    return NULL; // Should not be reachable
 }
 
 
