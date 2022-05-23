@@ -35,7 +35,7 @@ static void variable(COMPILER* compiler, bool can_assign);
 static void unary(COMPILER* compiler, bool can_assign);
 static void binary(COMPILER* compiler, bool can_assign);
 static void string(COMPILER* compiler, bool can_assign);
-static void literal(COMPILER* compiler, bool can_assign;
+static void literal(COMPILER* compiler, bool can_assign);
 static bool check(COMPILER* compiler, TOKEN_TYPE type);
 static bool match(COMPILER* compiler, TOKEN_TYPE type);
 static void declaration(COMPILER* compiler);
