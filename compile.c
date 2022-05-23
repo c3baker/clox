@@ -10,7 +10,7 @@
 #define GET_VM(compiler_ptr) ((compiler_ptr)->vm)
 #define GET_TYPE(token_ptr) ((token_ptr)->type) 
 
-typedef void (*Parse_fn)(COMPILER* compiler);
+typedef void (*Parse_fn)(COMPILER* compiler, bool can_assign);
 typedef struct 
 {
     Parse_fn prefix;
@@ -29,13 +29,13 @@ static void emit_bytes(COMPILER* compiler, uint8_t byte_1, uint8_t byte_2);
 static void emit_constant(COMPILER* compiler, Value constant_value);
 static void expression(COMPILER* compiler);
 static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence);
-static void number(COMPILER* compiler);
-static void grouping(COMPILER* compiler);
-static void variable(COMPILER* compiler);
-static void unary(COMPILER* compiler);
-static void binary(COMPILER* compiler);
-static void string(COMPILER* compiler);
-static void literal(COMPILER* compiler);
+static void number(COMPILER* compiler, bool can_assign);
+static void grouping(COMPILER* compiler, bool can_assign);
+static void variable(COMPILER* compiler, bool can_assign);
+static void unary(COMPILER* compiler, bool can_assign);
+static void binary(COMPILER* compiler, bool can_assign);
+static void string(COMPILER* compiler, bool can_assign);
+static void literal(COMPILER* compiler, bool can_assign;
 static bool check(COMPILER* compiler, TOKEN_TYPE type);
 static bool match(COMPILER* compiler, TOKEN_TYPE type);
 static void declaration(COMPILER* compiler);
@@ -98,6 +98,7 @@ static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence)
 {
     PARSER* parser = GET_PARSER(compiler);
     Parse_fn prefix_rule;
+    bool can_assign = precedence <= PREC_ASSIGN;
     advance(compiler);
     prefix_rule = get_rule(GET_TYPE(&parser->previous))->prefix;
     if(prefix_rule == NULL)
@@ -106,7 +107,7 @@ static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence)
         return;
     }
 
-    prefix_rule(compiler);
+    prefix_rule(compiler, can_assign);
 
     while(precedence <= get_rule(GET_TYPE(&parser->current))->precedence)
     {
@@ -119,7 +120,12 @@ static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence)
             error(parser, "Expected expression");
             return;
         }
-        infix_rule(compiler);
+        infix_rule(compile, can_assign);
+    }
+
+    if(can_assign && match(TOKEN_EQUAL))
+    {
+        error(parser, "Invalid assignment target");
     }
 }
 
@@ -259,14 +265,13 @@ static void expression(COMPILER* compiler)
     parse_precedence(compiler, PREC_ASSIGN); //Parse all expressions of precedence PERC_ASSIGN or higher
 }
 
-static void number(COMPILER* compiler)
+static void number(COMPILER* compiler, bool can_assign)
 {
     double value = strtod(GET_PARSER(compiler)->previous.start, NULL);
-    printf("Number Double %f\n", value);
     emit_constant(compiler, NUMERIC_VAL(value));
 }
 
-static void string(COMPILER* compiler)
+static void string(COMPILER* compiler, bool can_assign)
 {
    char* str = GET_PARSER(compiler)->previous.start + 1;  //Skip the leading double-quote
    size_t str_len = GET_PARSER(compiler)->previous.length - 2; // Remove the start and end double-quotes of the string
@@ -274,13 +279,13 @@ static void string(COMPILER* compiler)
    emit_constant(compiler, OBJ_VAL(str_obj));
 }
 
-static void grouping(COMPILER* compiler)
+static void grouping(COMPILER* compiler, bool can_assign)
 {
     expression(compiler);
     consume(compiler, TOKEN_RIGHT_PAREN, "Could not find matching ')'");
 }
 
-static void unary(COMPILER* compiler)
+static void unary(COMPILER* compiler, bool can_assign)
 {
     TOKEN* operator = &GET_PARSER(compiler)->previous;
 
@@ -292,16 +297,31 @@ static void unary(COMPILER* compiler)
     }
 }
 
-static void variable(COMPILER* compiler)
+static void variable(COMPILER* compiler, bool can_assign)
 {
     PARSER* parser = GET_PARSER(compiler);
 
-    named_variable(compiler, &parser->previous);
+    named_variable(compiler, &parser->previous, can_assign);
 }
 
-static void named_variable(COMPILER* compiler, TOKEN* identifier)
+static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assign)
 {
     int index = identifier_constant(compiler, identifier);
+
+    if(can_assign && match(compiler, TOKEN_EQUAL))
+    {
+        expression(compiler);
+        if(index > MAX_SHORT_CONST_INDEX)
+        {
+            emit_byte(compiler, OP_SET_GLOBAL_LONG);
+            emit_long_constant(compiler, index);
+        }
+        else
+        {
+            emit_byte(compiler, OP_SET_GLOBAL);
+            emit_byte(compiler, (uint8_t)index);
+        }
+    }
 
     if(index > MAX_SHORT_CONST_INDEX)
     {

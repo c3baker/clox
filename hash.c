@@ -120,11 +120,12 @@ bool table_get(HASH_TABLE* h_table, const OBJ* key, Value* value)
    return true;
 }
 
-
-void table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
+/** Return true if inserting new entry, false if overriding a previous entry **/
+bool table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
 {
     HASH_VALUE h_index = 0;
     ENTRY* entry = NULL;
+    bool new_entry = false;
 
     if(key == NULL)
         return;
@@ -137,6 +138,7 @@ void table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
         entry->key = key;
         entry->deleted = false;
         h_table->count++;
+        new_entry = true;
     }
 
     entry->value = value; // Replace old value if key is already in table
@@ -146,6 +148,8 @@ void table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
       // Need to expand the hash table
       expand_hash_table(h_table);
     }
+
+    return new_entry;
 }
 
 

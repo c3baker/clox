@@ -245,17 +245,17 @@ static INTERPRET_RESULT run(VM* vm)
                 return INTERPRET_OK;
             case OP_DEFINE_GLOBAL:
                 o = READ_OBJECT(vm);
-                table_insert(vm->globals, o, peek(vm, 0));
+                table_insert(&vm->globals, o, peek(vm, 0));
                 pop(vm); //Pop AFTER adding to table due to garbage collection
                 return INTERPRET_OK;
             case OP_DEFINE_GLOBAL_LONG:
                 o = READ_OBJECT_LONG(vm);
-                table_insert(vm->globals, o, peek(vm, 0));
+                table_insert(&vm->globals, o, peek(vm, 0));
                 pop(vm);
                 return INTERPRET_OK;
             case OP_GET_GLOBAL:
                 o = READ_OBJECT(vm);
-                if(!table_get(vm->globals, o, &v))
+                if(!table_get(&vm->globals, o, &v))
                 {
                     runtime_error(vm, "Undefined global variable %s\n", OBJ_TO_STRING(o));
                     return INTERPRET_RUNTIME_ERROR;
@@ -264,12 +264,30 @@ static INTERPRET_RESULT run(VM* vm)
                 return INTERPRET_OK;
             case OP_GET_GLOBAL_LONG:
                 o = READ_OBJECT_LONG(vm);
-                if(!table_get(vm->globals, o, &v))
+                if(!table_get(&vm->globals, o, &v))
                 {
                     runtime_error(vm, "Undefined global variable %s\n", OBJ_TO_STRING(o));
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 push(vm, v);
+                return INTERPRET_OK;
+            case OP_SET_GLOBAL:
+                o = READ_OBJECT(vm);
+                if(!insert_table(&vm->globals, o , peek(vm, 0)))
+                {
+                    runtime_error(vm, "Undefined global variable %s\n", OBJ_TO_STRING(o));
+                    delete_entry(vm, o);
+                    return INTERPRET_RUNTIME_ERROR;                   
+                }
+                return INTERPRET_OK;
+            case OP_SET_GLOBAL_LONG:
+                o = READ_OBJECT_LONG(vm);
+                if(!insert_table(&vm->globals, o , peek(vm, 0)))
+                {
+                    runtime_error(vm, "Undefined global variable %s\n", OBJ_TO_STRING(o));
+                    delete_entry(vm, o);
+                    return INTERPRET_RUNTIME_ERROR;                   
+                }
                 return INTERPRET_OK;
             default:
                 printf("UNKNOWN OP CODE\n");
