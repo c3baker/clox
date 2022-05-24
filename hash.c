@@ -81,8 +81,8 @@ void free_hash_table(HASH_TABLE* h_table)
 
 static ENTRY* find_entry(HASH_TABLE* h_table, OBJ* key)
 {
-    HASH_VALUE h_index = key->hash % h_table->capacity;
-    HASH_VALUE start_index = h_index;
+    uint32_t h_index = key->hash % h_table->capacity;
+    uint32_t start_index = h_index;
     ENTRY* first_tombstone = NULL;
 
     while(!IS_NULL_ENTRY(h_table->table[h_index]))
@@ -123,7 +123,7 @@ bool table_get(HASH_TABLE* h_table, const OBJ* key, Value* value)
 /** Return true if inserting new entry, false if overriding a previous entry **/
 bool table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
 {
-    HASH_VALUE h_index = 0;
+    uint32_t h_index = 0;
     ENTRY* entry = NULL;
     bool new_entry = false;
 
@@ -155,7 +155,7 @@ bool table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
 
 OBJ* delete_entry(HASH_TABLE* h_table, const OBJ* key)
 {
-    HASH_VALUE h_index = 0;
+    uint32_t h_index = 0;
     ENTRY* entry = NULL;
 
     if(key == NULL)
@@ -171,7 +171,7 @@ OBJ* delete_entry(HASH_TABLE* h_table, const OBJ* key)
     return entry->key;  // So key object can be freed externally since key object was created externally
 }
 
-ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t len, HASH_VALUE hash)
+ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t len, uint32_t hash)
 {
     size_t table_size = h_table->capacity;
     size_t index = hash & table_size;

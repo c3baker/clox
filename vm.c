@@ -74,7 +74,7 @@ static void free_vm_objects(VM* vm)
     while(object != NULL)
     {
         OBJ* next = object->next;
-        free_object(object);
+        free_object(vm, object);
         object = next;
     }
 }

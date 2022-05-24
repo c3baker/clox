@@ -9,10 +9,11 @@
 #define CLOX_OBJECT_H_
 
 #include "common.h"
-#include "clox_value.h"
 #include "clox_vm.h"
 
-typedef unsigned int HASH_VALUE;
+#define GET_OBJ_TYPE(o_ptr)  (o_ptr->type)
+#define NEW_STRING(_vm, len, c_string) (CLOX_STRING*)new_string_object(_vm, len, c_string)
+#define OBJ_TO_STRING(o_ptr) ((CLOX_STRING*)(o_ptr))->c_string
 
 
 typedef enum
@@ -23,13 +24,10 @@ typedef enum
 struct obj
 {
    struct obj* next;
-   HASH_VALUE hash;
+   uint32_t hash;
    OBJ_TYPE type;
 };
 
-#define GET_OBJ_TYPE(o_ptr)  (o_ptr->type)
-#define NEW_STRING(_vm, len, c_string) (CLOX_STRING*)new_string_object(_vm, len, c_string)
-#define OBJ_TO_STRING(o_ptr) ((CLOX_STRING*)(o_ptr))->c_string
 typedef struct string_obj
 {
     OBJ obj;
@@ -42,5 +40,5 @@ bool object_compare(OBJ* a, OBJ* b);
 void print_object(OBJ* o);
 OBJ* concatenate_strings(CLOX_STRING* str_1, CLOX_STRING* str_2);
 OBJ* new_string_object(VM* vm, size_t len, char* str_content);
-void free_object(OBJ* object);
+void free_object(VM* vm , OBJ* object);
 #endif /* CLOX_OBJECT_H_ */

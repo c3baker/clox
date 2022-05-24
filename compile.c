@@ -47,7 +47,8 @@ static void define_variable(COMPILER* compiler, int value_index);
 static int parse_variable(COMPILER* compiler, char* message);
 static int identifier_constant(COMPILER* compiler, TOKEN* ident_token);
 static void emit_long_constant(COMPILER* compiler, int value_index);
-static void named_variable(COMPILER* compiler, TOKEN* identifier);
+static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assign);
+static void print_statement(COMPILER* compiler);
 
 /* PRATT PARSER TABLE 
  */
@@ -123,7 +124,7 @@ static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence)
         infix_rule(compile, can_assign);
     }
 
-    if(can_assign && match(TOKEN_EQUAL))
+    if(can_assign && match(compiler, TOKEN_EQUAL))
     {
         error(parser, "Invalid assignment target");
     }
@@ -210,9 +211,9 @@ static int parse_variable(COMPILER* compiler, char* message)
 
 static void emit_long_constant(COMPILER* compiler, int value_index)
 {
-    emit_bytes(compiler, (uint8_t)(value_index & MAX_SHORT_CONST_INDEX));
-    emit_bytes(compiler, (uint8_t)((value_index >> 8) & MAX_SHORT_CONST_INDEX));
-    emit_bytes(compiler, (uint8_t)((value_index >> 16) & MAX_SHORT_CONST_INDEX));
+    emit_byte(compiler, (uint8_t)(value_index & MAX_SHORT_CONST_INDEX));
+    emit_byte(compiler, (uint8_t)((value_index >> 8) & MAX_SHORT_CONST_INDEX));
+    emit_byte(compiler, (uint8_t)((value_index >> 16) & MAX_SHORT_CONST_INDEX));
 }
 
 static void define_variable(COMPILER* compiler, int value_index)
@@ -220,13 +221,13 @@ static void define_variable(COMPILER* compiler, int value_index)
     if(value_index > MAX_SHORT_CONST_INDEX)
     {
         // Little Endian byte storage
-        emit_bytes(compiler, OP_DEFINE_GLOBAL_LONG);
+        emit_byte(compiler, OP_DEFINE_GLOBAL_LONG);
         emit_long_constant(compiler, value_index);
     }
     else
     {
-        emit_bytes(compiler, OP_DEFINE_GLOBAL);
-        emit_bytes(compiler, (uint8_t)value_index);
+        emit_byte(compiler, OP_DEFINE_GLOBAL);
+        emit_byte(compiler, (uint8_t)value_index);
     }
 }
 
@@ -336,7 +337,7 @@ static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assig
 
 }
 
-static void binary(COMPILER* compiler)
+static void binary(COMPILER* compiler, bool can_assign)
 {
     TOKEN operator = GET_PARSER(compiler)->previous;
     PARSE_RULE* rule = get_rule(GET_TYPE(&operator));
@@ -381,7 +382,7 @@ static void binary(COMPILER* compiler)
 
 }
 
-static void literal(COMPILER* compiler)
+static void literal(COMPILER* compiler, bool can_assign)
 {
     TOKEN prev = GET_PARSER(compiler)->previous;
     switch(GET_TYPE(&prev))
