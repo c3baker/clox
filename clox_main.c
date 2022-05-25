@@ -1,5 +1,4 @@
 #include "common.h"
-#include "clox_chunk.h"
 #include "clox_vm.h"
 #include <stdlib.h>
 #include <stdio.h>

@@ -46,9 +46,11 @@ static void var_declaration(COMPILER* compiler);
 static void define_variable(COMPILER* compiler, int value_index);
 static int parse_variable(COMPILER* compiler, char* message);
 static int identifier_constant(COMPILER* compiler, TOKEN* ident_token);
-static void emit_long_constant(COMPILER* compiler, int value_index);
 static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assign);
 static void print_statement(COMPILER* compiler);
+static void emit_access_constant(COMPILER* compiler, int value_index);
+
+
 
 /* PRATT PARSER TABLE 
  */
@@ -209,26 +211,19 @@ static int parse_variable(COMPILER* compiler, char* message)
     return identifier_constant(compiler, &ident_token);
 }
 
-static void emit_long_constant(COMPILER* compiler, int value_index)
-{
-    emit_byte(compiler, (uint8_t)(value_index & MAX_SHORT_CONST_INDEX));
-    emit_byte(compiler, (uint8_t)((value_index >> 8) & MAX_SHORT_CONST_INDEX));
-    emit_byte(compiler, (uint8_t)((value_index >> 16) & MAX_SHORT_CONST_INDEX));
-}
-
 static void define_variable(COMPILER* compiler, int value_index)
 {
     if(value_index > MAX_SHORT_CONST_INDEX)
     {
         // Little Endian byte storage
         emit_byte(compiler, OP_DEFINE_GLOBAL_LONG);
-        emit_long_constant(compiler, value_index);
     }
     else
     {
         emit_byte(compiler, OP_DEFINE_GLOBAL);
-        emit_byte(compiler, (uint8_t)value_index);
     }
+
+    emit_access_constant(compiler, value_index);
 }
 
 static void expression_statement(COMPILER* compiler)
@@ -315,26 +310,24 @@ static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assig
         if(index > MAX_SHORT_CONST_INDEX)
         {
             emit_byte(compiler, OP_SET_GLOBAL_LONG);
-            emit_long_constant(compiler, index);
         }
         else
         {
             emit_byte(compiler, OP_SET_GLOBAL);
-            emit_byte(compiler, (uint8_t)index);
         }
+        emit_access_constant(compiler, index);
+
     }
 
     if(index > MAX_SHORT_CONST_INDEX)
     {
         emit_byte(compiler, OP_GET_GLOBAL_LONG);
-        emit_long_constant(compiler, index);
     }
     else
     {
         emit_byte(compiler, OP_GET_GLOBAL);
-        emit_byte(compiler, (uint8_t)index);
     }
-
+    emit_access_constant(compiler, index);
 }
 
 static void binary(COMPILER* compiler, bool can_assign)
@@ -493,6 +486,11 @@ bool compile(VM* vm, const char* source, CHUNK* chunk)
        }
     #endif
     return !parser.had_error;
+}
+
+static void emit_access_constant(COMPILER* compiler, int constant_index)
+{
+    access_constant(compiler->compiling_chunk, constant_index, GET_PARSER(compiler)->previous.line);
 }
 
 static void emit_constant(COMPILER* compiler, Value constant_value)

@@ -56,5 +56,5 @@ void write_chunk(CHUNK* chunk, uint8_t byte, int line);
 void free_chunk(CHUNK* chunk);
 void write_constant(CHUNK* chunk, Value value, int line);
 int get_code_line(CHUNK* chunk, int code_index);
-
+void access_constant(CHUNK* chunk, int index, int line);
 #endif

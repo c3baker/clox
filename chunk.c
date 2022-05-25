@@ -93,10 +93,8 @@ static int add_constant(CHUNK* chunk, Value value)
     return chunk->constants.count - 1;
 }
 
-void write_constant(CHUNK* chunk, Value value, int line)
+void access_constant(CHUNK* chunk, int index, int line)
 {
-    int index = add_constant(chunk, value);
-
     if(index > MAX_SHORT_CONST_INDEX)
     {
         // Little Endian byte storage
@@ -110,5 +108,12 @@ void write_constant(CHUNK* chunk, Value value, int line)
         write_chunk(chunk, OP_CONSTANT, line);
         write_chunk(chunk, (uint8_t)index, line);
     }
-
 }
+
+void write_constant(CHUNK* chunk, Value value, int line)
+{
+    int index = add_constant(chunk, value);
+    access_constant(chunk, index, line);
+}
+
+
