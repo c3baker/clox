@@ -23,17 +23,15 @@
     entry.value = NIL_VAL(); \
     entry.deleted = true; \
     }while(0)
-static ENTRY* find_entry(HASH_TABLE* h_table, OBJ* key);
-static void hash_table_allocation(HASH_TABLE* h_table, size_t size);
+static ENTRY* find_entry(HASH_TABLE* h_table, const OBJ* key);
+static void hash_table_entry_allocation(ENTRY** entries, size_t old_size, size_t size);
 static void expand_hash_table(HASH_TABLE* h_table);
 
 void init_hash_table(HASH_TABLE* h_table)
 {
-    int i = 0;
-
     h_table->capacity = HASH_TABLE_INIT_CAP;
     h_table->count = 0;
-    hash_table_allocation(&h_table->table, 0, HASH_TABLE_INIT_CAP);
+    hash_table_entry_allocation(&h_table->table, 0, HASH_TABLE_INIT_CAP);
 }
 
 static void expand_hash_table(HASH_TABLE* h_table)
@@ -43,7 +41,7 @@ static void expand_hash_table(HASH_TABLE* h_table)
     ENTRY* new_table = NULL;
     ENTRY* old_table = h_table->table;
 
-    hash_table_allocation(&new_table, old_capacity, h_table->capacity * 2);
+    hash_table_entry_allocation(&new_table, old_capacity, h_table->capacity * 2);
     h_table->table = new_table;
 
     for(i = 0; i < old_capacity; i++)
@@ -61,15 +59,15 @@ static void expand_hash_table(HASH_TABLE* h_table)
 
 }
 
-static void hash_table_allocation(ENTRY** table, size_t old_size, size_t new_size)
+static void hash_table_entry_allocation(ENTRY** entries, size_t old_size, size_t new_size)
 {
     int i = 0;
 
-    *table = GROW_ARRAY(ENTRY, *table, old_size, sizeof(ENTRY) * new_size);
+    *entries = GROW_ARRAY(ENTRY, *entries, old_size, sizeof(ENTRY) * new_size);
 
     for(i = 0; i < new_size; i++)
     {
-        SET_NULL_ENTRY((*table)[i]);
+        SET_NULL_ENTRY((*entries)[i]);
     }
 }
 
@@ -79,7 +77,7 @@ void free_hash_table(HASH_TABLE* h_table)
     h_table->table = NULL;
 }
 
-static ENTRY* find_entry(HASH_TABLE* h_table, OBJ* key)
+static ENTRY* find_entry(HASH_TABLE* h_table, const OBJ* key)
 {
     uint32_t h_index = key->hash % h_table->capacity;
     uint32_t start_index = h_index;
@@ -121,14 +119,10 @@ bool table_get(HASH_TABLE* h_table, const OBJ* key, Value* value)
 }
 
 /** Return true if inserting new entry, false if overriding a previous entry **/
-bool table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
+bool table_insert(HASH_TABLE* h_table, OBJ* key, Value value)
 {
-    uint32_t h_index = 0;
     ENTRY* entry = NULL;
     bool new_entry = false;
-
-    if(key == NULL)
-        return;
 
     entry = find_entry(h_table, key);
 
@@ -155,7 +149,6 @@ bool table_insert(HASH_TABLE* h_table, const OBJ* key, Value value)
 
 OBJ* delete_entry(HASH_TABLE* h_table, const OBJ* key)
 {
-    uint32_t h_index = 0;
     ENTRY* entry = NULL;
 
     if(key == NULL)
@@ -197,7 +190,7 @@ ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t le
                (e.key->hash == hash) &&
                (0 == memcmp(AS_STRING(e.value)->c_string, chars, len)))
                {
-                   return &e;
+                   return &h_table->table[index];
                }
         }
 

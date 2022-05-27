@@ -3,6 +3,8 @@
 #include "clox_debug.h"
 #include "clox_chunk.h"
 #include "clox_object.h"
+#include "clox_value.h"
+#include "clox_hash.h"
 
 int simple_instruction(const char* op_name, int offset);
 int constant_instruction(const char* name, const CHUNK* chunk, int offset );

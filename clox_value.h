@@ -2,6 +2,7 @@
 #define clox_value_h
 
 #include <stdbool.h>
+#include "common.h"
 
 #define BOOL_VAL(value) ((Value){VAL_BOOL, {.boolean = value}})
 #define NIL_VAL()  ((Value){VAL_NIL, {.numeric = 0}})
@@ -21,31 +22,6 @@
 #define AS_STRING(value) ((CLOX_STRING*)((CLOX_STRING*)AS_OBJECT(value)))
 #define C_STRING(value)  ((CLOX_STRING*)AS_OBJECT(value))->c_string
 
-typedef struct obj OBJ;
-typedef enum
-{
-    VAL_BOOL,
-    VAL_NIL,
-    VAL_NUMERIC,
-    VAL_OBJ
-}VALUE_TYPE;
-
-typedef struct
-{
- VALUE_TYPE type;
- union{
-     bool boolean;
-     double numeric;
-     OBJ* obj;
- }as;   
-}Value;
-
-typedef struct 
-{
-    int capacity;
-    int count;
-    Value* values;
-}VALUE_ARRAY;
 
 void init_value_array(VALUE_ARRAY* array);
 void free_value_array(VALUE_ARRAY* array);

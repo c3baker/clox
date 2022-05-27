@@ -9,21 +9,6 @@
 #define CLOX_VM_H_
 
 #include "common.h"
-#include "clox_chunk.h"
-#include "clox_hash.h"
-
-#define MAX_STACK_SIZE 512
-
-typedef struct
-{
-   CHUNK* chunk;
-   uint8_t* ip;
-   Value* stack_top;
-   OBJ* objects;
-   HASH_TABLE strings;
-   HASH_TABLE globals;
-   Value value_stack[MAX_STACK_SIZE];
-}VM;
 
 typedef enum
 {

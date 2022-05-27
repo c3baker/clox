@@ -1,5 +1,8 @@
 #include "clox_compiler.h"
 #include "clox_object.h"
+#include "clox_scanner.h"
+#include "clox_chunk.h"
+#include "clox_value.h"
 
 #ifdef DEBUG_PRINT_CODE
     #include "clox_debug.h"
@@ -9,6 +12,15 @@
 #define GET_SCANNER(compiler_ptr) ((compiler_ptr)->scanner)
 #define GET_VM(compiler_ptr) ((compiler_ptr)->vm)
 #define GET_TYPE(token_ptr) ((token_ptr)->type) 
+
+typedef struct
+{
+    VM* vm;
+    SCANNER* scanner;
+    PARSER* parser;
+    CHUNK* compiling_chunk;
+}COMPILER;
+
 
 typedef void (*Parse_fn)(COMPILER* compiler, bool can_assign);
 typedef struct 
@@ -48,8 +60,6 @@ static int parse_variable(COMPILER* compiler, char* message);
 static int identifier_constant(COMPILER* compiler, TOKEN* ident_token);
 static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assign);
 static void print_statement(COMPILER* compiler);
-static void emit_access_constant(COMPILER* compiler, int value_index);
-
 
 
 /* PRATT PARSER TABLE 
@@ -116,14 +126,13 @@ static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence)
     {
         Parse_fn infix_rule;
         advance(compiler);
-        printf("Infix Token %d\n", GET_TYPE(&parser->previous));
         infix_rule = get_rule(GET_TYPE(&parser->previous))->infix;
         if(infix_rule == NULL)
         {
             error(parser, "Expected expression");
             return;
         }
-        infix_rule(compile, can_assign);
+        infix_rule(compiler, can_assign);
     }
 
     if(can_assign && match(compiler, TOKEN_EQUAL))
@@ -172,7 +181,7 @@ static void declaration(COMPILER* compiler)
     if(GET_PARSER(compiler)->panic_mode)
     {
         // Synchronize the compiler
-        synchronize(GET_PARSER(compiler));
+        synchronize(compiler);
     }
 }
 
@@ -195,7 +204,7 @@ static void statement(COMPILER* compiler)
 
 static int identifier_constant(COMPILER* compiler, TOKEN* ident_token)
 {
-    return add_constant(OBJ_VAL(new_string_object(GET_VM(compiler),ident_token->length,
+    return add_constant(compiler->compiling_chunk, OBJ_VAL(new_string_object(GET_VM(compiler),ident_token->length,
                                     ident_token->start)));
 }
 
@@ -223,13 +232,12 @@ static void define_variable(COMPILER* compiler, int value_index)
         emit_byte(compiler, OP_DEFINE_GLOBAL);
     }
 
-    emit_access_constant(compiler, value_index);
+    write_constant_index(compiler->compiling_chunk, value_index, compiler->parser->previous.line);
 }
 
 static void expression_statement(COMPILER* compiler)
 {
     expression(compiler);
-    consume(compiler, TOKEN_SEMICOLON, "expected ; at end of statement");
     emit_byte(compiler, OP_POP);
 }
 
@@ -247,6 +255,7 @@ static void var_declaration(COMPILER* compiler)
     if(match(compiler, TOKEN_EQUAL))
     {
         // There's an assignment
+        expression(compiler);
     }
     else
     {
@@ -315,8 +324,7 @@ static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assig
         {
             emit_byte(compiler, OP_SET_GLOBAL);
         }
-        emit_access_constant(compiler, index);
-
+        write_constant_index(compiler->compiling_chunk, index, compiler->parser->previous.line);
     }
 
     if(index > MAX_SHORT_CONST_INDEX)
@@ -327,7 +335,7 @@ static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assig
     {
         emit_byte(compiler, OP_GET_GLOBAL);
     }
-    emit_access_constant(compiler, index);
+    write_constant_index(compiler->compiling_chunk, index, compiler->parser->previous.line);
 }
 
 static void binary(COMPILER* compiler, bool can_assign)
@@ -486,11 +494,6 @@ bool compile(VM* vm, const char* source, CHUNK* chunk)
        }
     #endif
     return !parser.had_error;
-}
-
-static void emit_access_constant(COMPILER* compiler, int constant_index)
-{
-    access_constant(compiler->compiling_chunk, constant_index, GET_PARSER(compiler)->previous.line);
 }
 
 static void emit_constant(COMPILER* compiler, Value constant_value)

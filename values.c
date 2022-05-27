@@ -1,4 +1,5 @@
 #include "clox_object.h"
+#include "clox_value.h"
 #include "clox_memory.h"
 
 void init_value_array(VALUE_ARRAY* array)

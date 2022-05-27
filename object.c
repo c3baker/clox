@@ -8,6 +8,7 @@
 #include "clox_object.h"
 #include "clox_memory.h"
 #include "clox_hash.h"
+#include "clox_value.h"
 
 #define OBJ_AS_STRING(o_ptr) ((CLOX_STRING*)o_ptr)
 #define CLOX_STRING_SIZE(len) sizeof(CLOX_STRING) + ((len + 1) *sizeof(char))  // +1 so there is space to add a null terminator
@@ -18,8 +19,8 @@
 #define REMOVE_OBJECT(_vm, obj_ptr) remove_object_from_list(_vm, obj_ptr)
 
 static OBJ* allocate_object(VM* vm, size_t size, OBJ_TYPE type);
-static uint32_t hash_char_string(char* c_string, size_t len);
-static OBJ* string_copy(VM* vm, char* str_start, size_t len);
+static uint32_t hash_char_string(const char* c_string, size_t len);
+static OBJ* string_copy(VM* vm, const char* str_start, size_t len);
 
 static void remove_object_from_list(VM* vm, OBJ* object)
 {
@@ -38,7 +39,7 @@ static void remove_object_from_list(VM* vm, OBJ* object)
      temp->next = object->next;
 }
 
-static uint32_t hash_char_string(char* c_string, size_t len)
+static uint32_t hash_char_string(const char* c_string, size_t len)
 {
   uint32_t hash = 2166136261u;
 
@@ -54,7 +55,7 @@ static uint32_t hash_char_string(char* c_string, size_t len)
 }
 
 
-static OBJ* string_copy(VM* vm, char* str_start, size_t len)
+static OBJ* string_copy(VM* vm, const char* str_start, size_t len)
 {
     OBJ* str_obj =  allocate_object(vm, CLOX_STRING_SIZE(len), OBJ_STRING);
     CLOX_STRING* clox_string = OBJ_AS_STRING(str_obj);
@@ -66,7 +67,7 @@ static OBJ* string_copy(VM* vm, char* str_start, size_t len)
     return str_obj;
 }
 
-OBJ* new_string_object(VM* vm, size_t len, char* str_content)
+OBJ* new_string_object(VM* vm, size_t len, const char* str_content)
 {
     OBJ* str_obj = NULL;
     uint32_t hash = hash_char_string(str_content, len);

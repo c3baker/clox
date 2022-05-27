@@ -5,17 +5,6 @@
 #define DEBUG_TRACE_EXECUTION
 
 #include "common.h"
-#include "clox_scanner.h"
-#include "clox_chunk.h"
-#include "clox_vm.h"
-
-typedef struct 
-{
-    VM* vm;
-    SCANNER* scanner;
-    PARSER* parser;
-    CHUNK* compiling_chunk;
-}COMPILER;
 
 typedef enum
 {

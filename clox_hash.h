@@ -8,8 +8,7 @@
 #ifndef CLOX_HASH_H_
 #define CLOX_HASH_H_
 
-#include "clox_value.h"
-#include <stdbool.h>
+#include "common.h"
 
 #define HASH_TABLE_INIT_CAP 100
 #define MAX_LOAD 0.65
@@ -21,26 +20,10 @@
     entry.deleted = false; \
 }while(0);
 
-typedef struct hash_entry
-{
-    OBJ* key;
-    Value value;
-    bool deleted;
-}ENTRY;
-
-struct hash_table
-{
-    size_t count;
-    size_t capacity;
-    ENTRY* table;
-};
-
-typedef struct hash_table HASH_TABLE;
-
 void init_hash_table(HASH_TABLE* h_table);
 void free_hash_table(HASH_TABLE* h_table);
 OBJ* delete_entry(HASH_TABLE* h_table, const OBJ* key);
-bool table_insert(HASH_TABLE* h_table, const OBJ* key, Value value);
+bool table_insert(HASH_TABLE* h_table, OBJ* key, Value value);
 bool table_get(HASH_TABLE* h_table, const OBJ* key, Value* value);
 ENTRY* table_find_string_entry(HASH_TABLE* h_table, const char* chars, size_t len, uint32_t hash);
 #endif /* CLOX_HASH_H_ */

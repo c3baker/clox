@@ -1,7 +1,6 @@
 #include "clox_chunk.h"
 #include "clox_memory.h"
-
-static int add_constant(CHUNK* chunk, Value value);
+#include "clox_value.h"
 
 void init_chunk_lines(LINE* lines)
 {
@@ -86,26 +85,24 @@ void write_chunk(CHUNK* chunk, uint8_t byte, int line)
 }
 
 
-static int add_constant(CHUNK* chunk, Value value)
+int add_constant(CHUNK* chunk, Value value)
 {
     write_value(&chunk->constants, value);
     
     return chunk->constants.count - 1;
 }
 
-void access_constant(CHUNK* chunk, int index, int line)
+void write_constant_index(CHUNK* chunk, int index, int line)
 {
     if(index > MAX_SHORT_CONST_INDEX)
     {
         // Little Endian byte storage
-        write_chunk(chunk, OP_CONSTANT_LONG, line);
         write_chunk(chunk, (uint8_t)(index & MAX_SHORT_CONST_INDEX), line);
         write_chunk(chunk, (uint8_t)((index >> 8) & MAX_SHORT_CONST_INDEX), line);
         write_chunk(chunk, (uint8_t)((index >> 16) & MAX_SHORT_CONST_INDEX), line);
     }
     else
     {
-        write_chunk(chunk, OP_CONSTANT, line);
         write_chunk(chunk, (uint8_t)index, line);
     }
 }
@@ -113,7 +110,16 @@ void access_constant(CHUNK* chunk, int index, int line)
 void write_constant(CHUNK* chunk, Value value, int line)
 {
     int index = add_constant(chunk, value);
-    access_constant(chunk, index, line);
+
+    if(index > MAX_SHORT_CONST_INDEX)
+    {
+        write_chunk(chunk, OP_CONSTANT_LONG, line);
+    }
+    else
+    {
+        write_chunk(chunk, OP_CONSTANT, line);
+    }
+    write_constant_index(chunk, index, line);
 }
 
 

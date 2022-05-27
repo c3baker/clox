@@ -6,8 +6,11 @@
  */
 
 #include "clox_vm.h"
+#include "clox_chunk.h"
 #include "clox_compiler.h"
+#include "clox_value.h"
 #include "clox_object.h"
+#include "clox_hash.h"
 #include <stdarg.h>
 
 static INTERPRET_RESULT run(VM* vm);
@@ -273,19 +276,19 @@ static INTERPRET_RESULT run(VM* vm)
                 return INTERPRET_OK;
             case OP_SET_GLOBAL:
                 o = READ_OBJECT(vm);
-                if(!insert_table(&vm->globals, o , peek(vm, 0)))
+                if(!table_insert(&vm->globals, o , peek(vm, 0)))
                 {
                     runtime_error(vm, "Undefined global variable %s\n", OBJ_TO_STRING(o));
-                    delete_entry(vm, o);
+                    delete_entry(&vm->globals, o);
                     return INTERPRET_RUNTIME_ERROR;                   
                 }
                 return INTERPRET_OK;
             case OP_SET_GLOBAL_LONG:
                 o = READ_OBJECT_LONG(vm);
-                if(!insert_table(&vm->globals, o , peek(vm, 0)))
+                if(!table_insert(&vm->globals, o , peek(vm, 0)))
                 {
                     runtime_error(vm, "Undefined global variable %s\n", OBJ_TO_STRING(o));
-                    delete_entry(vm, o);
+                    delete_entry(&vm->globals, o);
                     return INTERPRET_RUNTIME_ERROR;                   
                 }
                 return INTERPRET_OK;
