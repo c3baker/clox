@@ -12,7 +12,8 @@
 #define ERROR_EXIT_CLOX_USAGE 64
 #define NULL_TERMINATOR '\0'
 #define MAX_STACK_SIZE 512
-
+#define UINT8_COUNT UINT8_MAX + 1
+#define GLOBAL_SCOPE_DEPTH 0
 typedef enum
 {
     OBJ_STRING

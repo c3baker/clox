@@ -12,6 +12,12 @@
 #define GET_SCANNER(compiler_ptr) ((compiler_ptr)->scanner)
 #define GET_VM(compiler_ptr) ((compiler_ptr)->vm)
 #define GET_TYPE(token_ptr) ((token_ptr)->type) 
+#define LOCAL_SCOPE(compiler_ptr) (compiler_ptr->scope_depth > 0)
+typedef struct
+{
+    TOKEN name;
+    int depth;
+}LOCAL;
 
 typedef struct
 {
@@ -19,6 +25,9 @@ typedef struct
     SCANNER* scanner;
     PARSER* parser;
     CHUNK* compiling_chunk;
+    int local_count;
+    int scope_depth;
+    LOCAL locals[UINT8_COUNT];
 }COMPILER;
 
 
@@ -185,6 +194,26 @@ static void declaration(COMPILER* compiler)
     }
 }
 
+static void begin_scope(COMPILER* compiler)
+{
+    compiler->scope_depth++;
+}
+
+static void end_scope(COMPILER* compiler)
+{
+    compiler->scope_depth--;
+}
+
+static void block(COMPILER* compiler)
+{
+    while(!check(compiler, TOKEN_RIGHT_BRACE) && !check(compiler, TOKEN_EOF))
+    {
+        declaration(compiler);
+    }
+
+    consume(compiler, TOKEN_RIGHT_BRACE, "Expected '}'.");
+}
+
 static void statement(COMPILER* compiler)
 {
    if(match(compiler, TOKEN_PRINT))
@@ -195,6 +224,12 @@ static void statement(COMPILER* compiler)
    else if(match(compiler, TOKEN_VAR))
    {
        var_declaration(compiler);
+   }
+   else if(match(compiler, TOKEN_LEFT_BRACE))
+   {
+       begin_scope(compiler);
+       block(compiler);
+       end_scope(compiler);
    }
    else
    {
@@ -208,12 +243,64 @@ static int identifier_constant(COMPILER* compiler, TOKEN* ident_token)
                                     ident_token->start)));
 }
 
+static void add_local(COMPILER* compiler, TOKEN name)
+{
+       LOCAL* local = NULL;
+
+       if(compiler->local_count == UINT8_COUNT)
+       {
+           error("Too many local variables in scope.");
+           return;
+       }
+
+       local = &compiler->locals[compiler->local_count];
+
+       local->depth = compiler->scope_depth;
+       local->name = name;
+       compiler->local_count++;
+}
+
+static void declare_variable(COMPILER* compiler)
+{
+    PARSER* parser = GET_PARSER(compiler);
+    TOKEN* name = NULL;
+    int i = 0;
+
+    if(!LOCAL_SCOPE(compiler))
+    {
+        return;
+    }
+
+    for(i = compiler->local_count; i >= 0;  i--)
+    {
+        LOCAL* local = &compiler->locals[i];
+        if((local->depth != -1) && (local->depth < compiler->scope_depth))
+        {
+            break;
+        }
+
+        if(identifiers_equal(name, &local->name))
+        {
+            error("Previously declared variable with same name in scope.");
+        }
+    }
+    name = &parser->previous;
+    add_local(compiler, *name);
+}
+
 static int parse_variable(COMPILER* compiler, char* message)
 {
     PARSER* parser = GET_PARSER(compiler);
     TOKEN ident_token = {0};
 
     consume(compiler, TOKEN_IDENTIFIER, message);
+
+    declare_variable(compiler);
+
+    if(LOCAL_SCOPE(compiler))
+    {
+        return 0; // Local variable no need to store identifier
+    }
 
     ident_token = parser->previous;
 
@@ -222,6 +309,14 @@ static int parse_variable(COMPILER* compiler, char* message)
 
 static void define_variable(COMPILER* compiler, int value_index)
 {
+    // No need to do anything for local variables
+    // the value of the local variable is already on the stack
+    // and its existence recorded
+    if(LOCAL_SCOPE(compiler))
+    {
+        return;
+    }
+
     if(value_index > MAX_SHORT_CONST_INDEX)
     {
         // Little Endian byte storage
@@ -464,13 +559,14 @@ static void advance(COMPILER* compiler)
     }
 }
 
-
 static void init_compiler(COMPILER* compiler, VM* vm, SCANNER* scanner, PARSER* parser, const char* source)
 {
     init_scanner(scanner, source);    
     compiler->parser = parser;
     compiler->scanner = scanner;
     compiler->vm = vm;
+    compiler->local_count = 0;
+    compiler->scope_depth = GLOBAL_SCOPE_DEPTH;
 }
 
 bool compile(VM* vm, const char* source, CHUNK* chunk)
