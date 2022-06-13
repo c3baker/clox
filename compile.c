@@ -48,6 +48,7 @@ static void emit_byte(COMPILER* compiler, uint8_t byte);
 static void emit_return(COMPILER* compiler);
 static void emit_bytes(COMPILER* compiler, uint8_t byte_1, uint8_t byte_2);
 static void emit_constant(COMPILER* compiler, Value constant_value);
+static size_t emit_jump(COMPILER* compiler, uint8_t jump_instruct);
 static void expression(COMPILER* compiler);
 static void parse_precedence(COMPILER* compiler, PRECEDENCE precedence);
 static void number(COMPILER* compiler, bool can_assign);
@@ -69,7 +70,11 @@ static int parse_variable(COMPILER* compiler, char* message);
 static int identifier_constant(COMPILER* compiler, TOKEN* ident_token);
 static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assign);
 static void print_statement(COMPILER* compiler);
-
+static bool identifiers_equal(const TOKEN* idnt_1, const TOKEN* idnt_2);
+static void declare_variable(COMPILER* compiler);
+static void if_statement(COMPILER* compiler);
+static void or(COMPILER* compiler);
+static void and(COMPILER* compiler);
 
 /* PRATT PARSER TABLE 
  */
@@ -96,7 +101,7 @@ PARSE_RULE rules[] = {
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_PRIMARY},
     [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMERIC] = {number, NULL, PREC_NONE},
-    [TOKEN_AND] = {NULL, NULL, PREC_NONE},
+    [TOKEN_AND] = {NULL, and, PREC_AND},
     [TOKEN_CLASS] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
@@ -104,7 +109,7 @@ PARSE_RULE rules[] = {
     [TOKEN_FUN] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},
-    [TOKEN_OR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_OR] = {NULL, or, PREC_OR},
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
@@ -201,18 +206,126 @@ static void begin_scope(COMPILER* compiler)
 
 static void end_scope(COMPILER* compiler)
 {
+    int i = 0;
+    int current_depth = compiler->scope_depth;
+    for(i = compiler->local_count; i >= 0; i--)
+    {
+        LOCAL* local = &compiler->locals[i];
+
+        if(local->depth < current_depth)
+        {
+            break;
+        }
+        emit_byte(compiler, OP_POP);
+        compiler->local_count--;
+    }
     compiler->scope_depth--;
 }
 
 static void block(COMPILER* compiler)
 {
+    begin_scope(compiler);
     while(!check(compiler, TOKEN_RIGHT_BRACE) && !check(compiler, TOKEN_EOF))
     {
         declaration(compiler);
     }
 
     consume(compiler, TOKEN_RIGHT_BRACE, "Expected '}'.");
+    end_scope(compiler);
 }
+
+static void patch_jump(COMPILER* compiler, size_t jump)
+{
+    
+    size_t diff = compiler->compiling_chunk->count - jump;
+    if(UINT16_MAX < diff)
+    {
+        error(GET_PARSER(compiler), "Jump distance too far. Cannot handle this large an if-block.");
+    }
+
+    compiler->compiling_chunk->code[jump - 2] = diff & 0xFF; // Lower 8 bits
+    compiler->compiling_chunk->code[jump - 1] = (diff >> 8) & 0xFF; // Upper 8 bits
+}
+
+static void if_statement(COMPILER* compiler)
+{
+    size_t jump = 0;
+    size_t else_jump = 0;
+    bool else_statement = false;
+
+    consume(compiler, TOKEN_LEFT_PAREN, "Expected '(' after 'if'");
+    expression(compiler);
+    consume(compiler, TOKEN_RIGHT_PAREN, "Expected ')");
+
+    jump = emit_jump(compiler, OP_JUMP_ON_FALSE);
+    emit_byte(compiler, OP_POP); //get rid of if-expression on stack when if-expression is true
+    consume(compiler, TOKEN_LEFT_BRACE, "Expected '{' following if-statement");
+    block(compiler);
+
+    if(match(compiler, TOKEN_ELSE))
+    {
+        else_jump = emit_jump(compiler, OP_JUMP);
+        else_statement = true;
+    }
+
+    patch_jump(compiler, jump);
+    emit_byte(compiler, OP_POP);  // Get rid of if-expression on stack in case if-expression was false
+
+    if(else_statement)
+    {
+        consume(compiler, TOKEN_LEFT_BRACE, "Expected '{' following if-statement");
+        block(compiler);   
+        patch_jump(compiler, else_jump);    
+    }
+    
+}
+
+static void for_initializer(COMPILER* compiler)
+{
+    if(match(compiler, TOKEN_SEMICOLON)) // No initializer
+    {
+        return;
+    }
+    if(match(compiler, TOKEN_VAR))
+    {
+        var_declaration(compiler);
+    }
+    else
+    {
+        expression_statement(compiler);
+        consume(compiler, TOKEN_SEMICOLON, "Expected ; after for initializer");
+    }
+}
+
+static void for_statement(COMPILER* compiler)
+{
+    size_t for_loop_start = 0;
+    size_t for_loop_end_jump = 0;
+    size_t increment_jump = 0;
+    size_t for_loop_increment = 0;
+
+    consume(compiler, TOKEN_LEFT_PAREN, "Expected '(' after for");
+    begin_scope(compiler);  //Being for-statement scope
+    for_initializer(compiler);
+    for_loop_start = compiler->compiling_chunk->count;    
+    expression(compiler); //for-condition
+    consume(compiler, TOKEN_SEMICOLON, "Expected ';");
+    for_loop_end_jump = emit_jump(compiler, OP_JUMP_ON_FALSE);
+    emit_byte(compiler, OP_POP); // Pop conditional expression result
+    increment_jump = emit_jump(compiler, OP_JUMP); // Jump over increment code, to be executed at end of the for-body
+    for_loop_increment = compiler->compiling_chunk->count;
+    expression(compiler); //Increment expression
+    emit_byte(compiler, OP_POP); // Pop increment expression result
+    consume(compiler, TOKEN_RIGHT_PAREN, "Expected matching ')' ");
+    emit_loop(compiler, for_loop_start);
+    patch_jump(compiler, increment_jump);
+    block(compiler); // for-loop body
+    emit_loop(compiler, for_loop_increment);
+    patch_jump(compiler, for_loop_end_jump);
+    emit_byte(compiler, OP_POP); // Pop conditional expression result
+    end_scope(compiler);
+}
+
 
 static void statement(COMPILER* compiler)
 {
@@ -227,9 +340,21 @@ static void statement(COMPILER* compiler)
    }
    else if(match(compiler, TOKEN_LEFT_BRACE))
    {
-       begin_scope(compiler);
+
        block(compiler);
-       end_scope(compiler);
+
+   }
+   else if (match(compiler, TOKEN_IF))
+   {
+       if_statement(compiler);
+   }
+   else if(match(compiler, TOKEN_WHILE))
+   {
+       while_statement(compiler);
+   }
+   else if(match(compiler, TOKEN_FOR))
+   {
+       for_statement(compiler);
    }
    else
    {
@@ -249,15 +374,25 @@ static void add_local(COMPILER* compiler, TOKEN name)
 
        if(compiler->local_count == UINT8_COUNT)
        {
-           error("Too many local variables in scope.");
+           error(GET_PARSER(compiler), "Too many local variables in scope.");
            return;
        }
 
        local = &compiler->locals[compiler->local_count];
 
-       local->depth = compiler->scope_depth;
+       local->depth = -1; // We consider this variable to be declared but uninitialized
        local->name = name;
        compiler->local_count++;
+}
+
+static bool identifiers_equal(const TOKEN* idnt_1, const TOKEN* idnt_2)
+{
+    if(idnt_1->length != idnt_2->length)
+    {
+        return false;
+    }
+    
+    return 0 == memcmp(idnt_1->start, idnt_2->start, idnt_1->length);
 }
 
 static void declare_variable(COMPILER* compiler)
@@ -281,7 +416,7 @@ static void declare_variable(COMPILER* compiler)
 
         if(identifiers_equal(name, &local->name))
         {
-            error("Previously declared variable with same name in scope.");
+            error(GET_PARSER(compiler), "Previously declared variable with same name in scope.");
         }
     }
     name = &parser->previous;
@@ -314,6 +449,7 @@ static void define_variable(COMPILER* compiler, int value_index)
     // and its existence recorded
     if(LOCAL_SCOPE(compiler))
     {
+        compiler->locals[compiler->local_count - 1].depth = compiler->scope_depth; // Now define the local variable
         return;
     }
 
@@ -379,6 +515,57 @@ static void string(COMPILER* compiler, bool can_assign)
    emit_constant(compiler, OBJ_VAL(str_obj));
 }
 
+static void emit_loop(COMPILER* compiler, size_t loop_start)
+{
+    uint16_t offset = (compiler->compiling_chunk->count - loop_start) + 2;
+
+    if(offset > UINT16_MAX)
+    {
+        error(GET_PARSER(compiler), "Loop too large, cannot make jump to the specified address.");
+    }
+    emit_byte(compiler, OP_LOOP_BACK);
+    emit_byte(compiler, offset & 0xFF);
+    emit_byte(compiler, (offset>>8) & 0xFF);
+}
+
+static void while_statement(COMPILER* compiler)
+{
+    size_t while_jump = 0;
+    size_t jump_back = 0;
+    size_t loop_start = compiler->compiling_chunk->count;
+
+    consume(compiler, TOKEN_LEFT_PAREN, "Expected '(' following while");
+    expression(compiler);
+    consume(compiler, TOKEN_RIGHT_PAREN, "Expected ')' following while condition");
+    while_jump = emit_jump(compiler, OP_JUMP_ON_FALSE);
+    emit_byte(compiler, OP_POP);  // Pop while-condition result
+    consume(compiler, TOKEN_LEFT_BRACE, "Expected '{' following while-statement");
+    block(compiler);
+    emit_loop(compiler, loop_start);
+    patch_jump(compiler, while_jump);
+    emit_byte(compiler, OP_POP;
+}
+
+static void or(COMPILER* compiler)
+{
+    size_t jump_1 = 0;
+    size_t jump_2 = 0;
+    jump_1 = emit_jump(compiler, OP_JUMP_ON_FALSE); // No need to evaluate the OR futher if the first expression was true 
+    jump_2 = emit_jump(compiler, OP_JUMP);
+    patch_jump(compiler, jump_1);
+    emit_byte(compiler, OP_POP);
+    parse_precedence(compiler, PREC_OR);
+    patch_jump(compile, jump_2);
+}
+
+static void and(COMPILER* compiler)
+{
+   size_t jump = emit_jump(compiler, OP_JUMP_ON_FALSE); // No need to evaluate the AND further if the first expression is false
+   emit_byte(compiler, OP_POP);
+   parse_precedence(compiler, PREC_AND);
+   patch_jump(compiler, jump);
+}
+
 static void grouping(COMPILER* compiler, bool can_assign)
 {
     expression(compiler);
@@ -404,31 +591,52 @@ static void variable(COMPILER* compiler, bool can_assign)
     named_variable(compiler, &parser->previous, can_assign);
 }
 
+static int resolve_local(COMPILER* compiler, TOKEN* identifier)
+{
+   int i = 0;
+
+   for(i = compiler->local_count; i >= 0; i--)
+   {
+       if(identifiers_equal(&compiler->locals[i].name, identifier))
+       {
+            if(compiler->locals[i].depth == -1)
+            {
+                error(GET_PARSER(compiler), "Cannot read local variable in its own initialization.");
+            }
+           return i;
+       }
+   }
+
+   return -1;
+}
+
+
 static void named_variable(COMPILER* compiler, TOKEN* identifier, bool can_assign)
 {
-    int index = identifier_constant(compiler, identifier);
+    uint8_t get_op = 0;
+    uint8_t set_op = 0;
+    int index = resolve_local(compiler, identifier);
 
-    if(can_assign && match(compiler, TOKEN_EQUAL))
+    if(index != -1)
     {
-        expression(compiler);
-        if(index > MAX_SHORT_CONST_INDEX)
-        {
-            emit_byte(compiler, OP_SET_GLOBAL_LONG);
-        }
-        else
-        {
-            emit_byte(compiler, OP_SET_GLOBAL);
-        }
-        write_constant_index(compiler->compiling_chunk, index, compiler->parser->previous.line);
-    }
-
-    if(index > MAX_SHORT_CONST_INDEX)
-    {
-        emit_byte(compiler, OP_GET_GLOBAL_LONG);
+        get_op = OP_GET_LOCAL;
+        set_op = OP_SET_LOCAL;
     }
     else
     {
-        emit_byte(compiler, OP_GET_GLOBAL);
+        index = identifier_constant(compiler, identifier);
+        get_op = index > MAX_SHORT_CONST_INDEX ? OP_SET_GLOBAL_LONG : OP_SET_GLOBAL;
+        set_op = index > MAX_SHORT_CONST_INDEX ? OP_GET_GLOBAL_LONG : OP_GET_GLOBAL;
+    }
+    
+    if(can_assign && match(compiler, TOKEN_EQUAL))
+    {
+        expression(compiler);
+        emit_byte(compiler, set_op);
+    }
+    else
+    {
+        emit_byte(compiler, get_op);
     }
     write_constant_index(compiler->compiling_chunk, index, compiler->parser->previous.line);
 }
@@ -442,7 +650,6 @@ static void binary(COMPILER* compiler, bool can_assign)
     switch(GET_TYPE(&operator))
     {
         case TOKEN_PLUS:
-            printf("OP ADD\n");
             emit_byte(compiler, OP_ADD);
             break;
         case TOKEN_MINUS:
@@ -611,4 +818,13 @@ static void emit_return(COMPILER* compiler)
 static void emit_byte(COMPILER* compiler, uint8_t byte)
 {
     write_chunk(compiler->compiling_chunk, byte, GET_PARSER(compiler)->previous.line);
+}
+
+static size_t emit_jump(COMPILER* compiler, uint8_t jump_instruct)
+{
+    emit_byte(compiler, jump_instruct);
+    emit_byte(compiler, 0xFF); // Dummy offset, must be patched later when we know how far to jump
+    emit_byte(compiler, 0xFF);
+
+    return compiler->compiling_chunk->count;    
 }

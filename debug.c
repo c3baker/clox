@@ -10,6 +10,12 @@ int simple_instruction(const char* op_name, int offset);
 int constant_instruction(const char* name, const CHUNK* chunk, int offset );
 int get_line_number(const CHUNK* chunk, int offset);
 
+static int byte_instruction(const char* name, const CHUNK* chunk, int offset)
+{
+    uint8_t slot = chunk->code[offset+1];
+    printf("%-16s %4d\n", name, slot);
+    return offset + 2;
+}
 
 int get_line_number(const CHUNK* chunk, int offset)
 {
@@ -78,10 +84,6 @@ void disassemble_chunk(const CHUNK* chunk, const char* name)
     {
         offset = disassemble_instruction(chunk, offset);
     }
-}
-
-void print_stack(const VM* vm)
-{
 }
 
 int binary_instruction(uint8_t binary_instruction, int offset)
@@ -153,7 +155,10 @@ int disassemble_instruction(const CHUNK* chunk, int offset)
             return constant_instruction("OP_GET_GLOBAL", chunk, offset);
         case OP_GET_GLOBAL_LONG:
             return constant_long_instruction("OP_GET_GLOBAL_LONG", chunk, offset);
-
+        case OP_GET_LOCAL:
+           return byte_instruction("OP_GET_LOCAL", chunk, offset);
+        case OP_SET_LOCAL:
+           return byte_instruction("OP_SET_LOCAL", chunk, offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1; 

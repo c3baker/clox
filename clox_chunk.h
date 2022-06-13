@@ -29,7 +29,12 @@ typedef enum{
     OP_GET_GLOBAL,
     OP_GET_GLOBAL_LONG,
     OP_SET_GLOBAL,
-    OP_SET_GLOBAL_LONG
+    OP_SET_GLOBAL_LONG,
+    OP_SET_LOCAL,
+    OP_GET_LOCAL,
+    OP_JUMP_ON_FALSE,
+    OP_JUMP,
+    OP_LOOP_BACK
 }OP_CODE;
 
 int add_constant(CHUNK* chunk, Value value);

@@ -155,6 +155,7 @@ static INTERPRET_RESULT run(VM* vm)
 {
 #define READ_BYTE(_vm) (*_vm->ip++)
 #define READ_CONSTANT(_vm) (_vm->chunk->constants.values[READ_BYTE(_vm)])
+#define READ_JUMP_OFFSET(_vm) (READ_BYTE(_vm) | READ_BYTE(_vm)<<8)
 #define READ_LONG_CONSTANT(_vm) (_vm->chunk->constants.values[(READ_BYTE(_vm) | READ_BYTE(_vm)<<8 | READ_BYTE(_vm)<<16)])
 #define READ_OBJECT(_vm) (AS_OBJECT(READ_CONSTANT(_vm)))
 #define READ_OBJECT_LONG(_vm) (AS_OBJECT(READ_LONG_CONSTANT(_vm)))
@@ -179,6 +180,8 @@ static INTERPRET_RESULT run(VM* vm)
         uint8_t instruction = READ_BYTE(vm);
         Value v = {0};
         OBJ* o = NULL;
+        uint8_t slot = 0;
+        
         switch(instruction)
         {
             case OP_RETURN:
@@ -292,6 +295,29 @@ static INTERPRET_RESULT run(VM* vm)
                     return INTERPRET_RUNTIME_ERROR;                   
                 }
                 return INTERPRET_OK;
+            case OP_GET_LOCAL:
+                slot = READ_BYTE(vm); // Index of local should match stack position
+                push(vm, vm->value_stack[slot]);
+                return INTERPRET_OK;
+            case OP_SET_LOCAL:
+                slot = READ_BYTE(vm); // Index of local should match stack position
+                vm->value_stack[slot] = peek(vm, 0);
+                return INTERPRET_OK;    
+            case OP_JUMP:
+                uint16_t offset = READ_JUMP_OFFSET(vm);      
+                vm->ip += offset;
+                return INTERPRET_OK;
+            case OP_JUMP_ON_FALSE:
+                uint16_t offset = READ_JUMP_OFFSET(vm); 
+                if(is_falsey(peek(vm, 0)))
+                {    
+                     vm->ip += offset; 
+                }
+                return INTERPRET_OK;
+            case OP_LOOP_BACK:
+                uint16_t offset = READ_JUMP_OFFSET(vm);
+                vm->ip -= offset;
+                retunr INTERPRET_OK;
             default:
                 printf("UNKNOWN OP CODE\n");
                 break;
