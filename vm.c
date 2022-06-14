@@ -181,7 +181,8 @@ static INTERPRET_RESULT run(VM* vm)
         Value v = {0};
         OBJ* o = NULL;
         uint8_t slot = 0;
-        
+        uint16_t offset = 0;
+
         switch(instruction)
         {
             case OP_RETURN:
@@ -304,20 +305,20 @@ static INTERPRET_RESULT run(VM* vm)
                 vm->value_stack[slot] = peek(vm, 0);
                 return INTERPRET_OK;    
             case OP_JUMP:
-                uint16_t offset = READ_JUMP_OFFSET(vm);      
+                offset = READ_JUMP_OFFSET(vm);      
                 vm->ip += offset;
                 return INTERPRET_OK;
             case OP_JUMP_ON_FALSE:
-                uint16_t offset = READ_JUMP_OFFSET(vm); 
+                offset = READ_JUMP_OFFSET(vm); 
                 if(is_falsey(peek(vm, 0)))
                 {    
                      vm->ip += offset; 
                 }
                 return INTERPRET_OK;
             case OP_LOOP_BACK:
-                uint16_t offset = READ_JUMP_OFFSET(vm);
+                offset = READ_JUMP_OFFSET(vm);
                 vm->ip -= offset;
-                retunr INTERPRET_OK;
+                return INTERPRET_OK;
             default:
                 printf("UNKNOWN OP CODE\n");
                 break;

@@ -75,6 +75,8 @@ static void declare_variable(COMPILER* compiler);
 static void if_statement(COMPILER* compiler);
 static void or(COMPILER* compiler);
 static void and(COMPILER* compiler);
+static void while_statement(COMPILER* compiler);
+static void emit_loop(COMPILER* compiler);
 
 /* PRATT PARSER TABLE 
  */
